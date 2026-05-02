@@ -1,0 +1,69 @@
+.feed-page {
+  position: relative;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.feed-container {
+  position: relative;
+  z-index: 1;
+  width: 100vw;
+  height: 100vh;
+  margin: 0 auto;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.feed-container::-webkit-scrollbar {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .feed-container {
+    width: 420px;
+  }
+}
+
+.feed-mute {
+  position: fixed;
+  top: 80px;
+  right: 24px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(20, 20, 20, 0.6);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 30;
+  transition: background-color 0.18s ease, border-color 0.18s ease,
+    transform 0.1s ease;
+}
+
+.feed-mute:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.feed-mute:active {
+  transform: scale(0.92);
+}
+
+@media (max-width: 640px) {
+  .feed-mute {
+    top: 76px;
+    right: 16px;
+  }
+}

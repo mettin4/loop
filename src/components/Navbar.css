@@ -1,0 +1,189 @@
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  z-index: 100;
+  transition: background-color 0.25s ease, border-color 0.25s ease,
+    backdrop-filter 0.25s ease;
+}
+
+.navbar-ghost {
+  background: transparent;
+  border-bottom: 1px solid transparent;
+}
+
+.navbar-solid {
+  background: rgba(10, 10, 10, 0.85);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 22px;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.navbar-mark {
+  display: inline-flex;
+  color: var(--accent);
+}
+
+.navbar-logo {
+  letter-spacing: 0;
+}
+
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.navbar-link {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: color 0.18s ease;
+  padding: 6px 0;
+}
+
+.navbar-link:hover {
+  color: var(--text-primary);
+}
+
+.navbar-link-active {
+  color: var(--accent);
+}
+
+.navbar-wallet {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.navbar-wallet-btn {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.18s ease, border-color 0.18s ease,
+    color 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.navbar-wallet-disconnected:hover {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.navbar-wallet-connected {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+.navbar-wallet-connected:hover {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.navbar-wallet-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-2);
+  box-shadow: 0 0 8px var(--accent-2);
+}
+
+.navbar-wallet-addr {
+  color: var(--text-primary);
+}
+
+.navbar-wallet-caret {
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.navbar-wallet-caret-open {
+  transform: rotate(180deg);
+}
+
+.navbar-wallet-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 168px;
+  background: rgba(20, 20, 20, 0.95);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  z-index: 110;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.navbar-wallet-menu-item {
+  text-align: left;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: 5px;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.navbar-wallet-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 720px) {
+  .navbar {
+    padding: 0 20px;
+  }
+  .navbar-links {
+    gap: 18px;
+  }
+  .navbar-link {
+    font-size: 13px;
+  }
+  .navbar-wallet-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 540px) {
+  .navbar-links {
+    display: none;
+  }
+}

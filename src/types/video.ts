@@ -11,5 +11,4 @@ export interface FeedVideo {
   comments: number
   tips: number
   shares: number
-  recipient: string
 }

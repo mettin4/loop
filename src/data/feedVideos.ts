@@ -4,9 +4,6 @@ function avatarFor(seed: string): string {
   return `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(seed)}`
 }
 
-const DEMO_RECIPIENT: string =
-  ((import.meta.env.VITE_DEMO_TIP_RECIPIENT as string | undefined) ?? '').trim()
-
 export const feedVideos: FeedVideo[] = [
   {
     id: 'wartime-notes-1',
@@ -21,7 +18,6 @@ export const feedVideos: FeedVideo[] = [
     comments: 892,
     tips: 341,
     shares: 234,
-    recipient: DEMO_RECIPIENT,
   },
   {
     id: 'quietriot-1',
@@ -36,7 +32,6 @@ export const feedVideos: FeedVideo[] = [
     comments: 447,
     tips: 189,
     shares: 156,
-    recipient: DEMO_RECIPIENT,
   },
   {
     id: 'offgrid-1',
@@ -51,7 +46,6 @@ export const feedVideos: FeedVideo[] = [
     comments: 78,
     tips: 34,
     shares: 19,
-    recipient: DEMO_RECIPIENT,
   },
   {
     id: 'nightset-1',
@@ -66,7 +60,6 @@ export const feedVideos: FeedVideo[] = [
     comments: 198,
     tips: 92,
     shares: 64,
-    recipient: DEMO_RECIPIENT,
   },
   {
     id: 'vinyl-dj-1',
@@ -81,7 +74,6 @@ export const feedVideos: FeedVideo[] = [
     comments: 184,
     tips: 47,
     shares: 28,
-    recipient: DEMO_RECIPIENT,
   },
   {
     id: 'tehran-lens-1',
@@ -96,6 +88,5 @@ export const feedVideos: FeedVideo[] = [
     comments: 512,
     tips: 128,
     shares: 89,
-    recipient: DEMO_RECIPIENT,
   },
 ]

@@ -1,20 +1,28 @@
-import { useWallet } from '@aptos-labs/wallet-adapter-react'
+import { useWallet as useAptosWallet } from '@aptos-labs/wallet-adapter-react'
+import {
+  useConnection,
+  useWallet as useSolanaWallet,
+} from '@solana/wallet-adapter-react'
+import { LAMPORTS_PER_SOL } from '@solana/web3.js'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { FeedVideo } from '../../types/video'
+import { formatEther } from 'viem'
+import { useAccount, useConfig } from 'wagmi'
+import { getBalance } from 'wagmi/actions'
+import { sepolia } from 'wagmi/chains'
 import {
   aptosClient,
   buildTipPayload,
   type TipResult,
 } from '../../lib/aptosTip'
+import { sendEthTip } from '../../lib/ethereumTip'
+import { sendSolTip } from '../../lib/solanaTip'
+import { tipConfigs } from '../../lib/tipConfig'
+import type { FeedVideo } from '../../types/video'
 import { CloseIcon } from '../wallet/icons'
 import PresetButton from './PresetButton'
 import TipSuccess from './TipSuccess'
 import './tip.css'
-
-const PRESETS = [0.001, 0.01, 0.1] as const
-const APT_USD_RATE = 10
-const MIN_TIP = 0.001
 
 type Selection = number | 'custom'
 
@@ -25,8 +33,15 @@ interface Props {
 }
 
 function TipModal({ video, isOpen, onClose }: Props) {
-  const { account, signAndSubmitTransaction } = useWallet()
-  const [selection, setSelection] = useState<Selection>(MIN_TIP)
+  const aptos = useAptosWallet()
+  const ethAccount = useAccount()
+  const ethConfig = useConfig()
+  const sol = useSolanaWallet()
+  const { connection } = useConnection()
+
+  const config = video ? tipConfigs[video.chain] : null
+
+  const [selection, setSelection] = useState<Selection>(0.001)
   const [customAmount, setCustomAmount] = useState('')
   const [balance, setBalance] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
@@ -34,31 +49,71 @@ function TipModal({ video, isOpen, onClose }: Props) {
   const [result, setResult] = useState<TipResult | null>(null)
 
   useEffect(() => {
-    if (!isOpen) return
-    setSelection(MIN_TIP)
+    if (!isOpen || !config) return
+    setSelection(config.presets[0])
     setCustomAmount('')
     setError(null)
     setResult(null)
     setLoading(false)
-  }, [isOpen, video?.id])
+  }, [isOpen, video?.id, config])
+
+  const currentAddress = (() => {
+    if (!video) return null
+    if (video.chain === 'APT') {
+      return aptos.account?.address ? String(aptos.account.address) : null
+    }
+    if (video.chain === 'ETH') return ethAccount.address ?? null
+    if (video.chain === 'SOL') {
+      return sol.publicKey ? sol.publicKey.toBase58() : null
+    }
+    return null
+  })()
 
   useEffect(() => {
-    if (!isOpen || !account?.address) return
-    const address = String(account.address)
+    if (!isOpen || !video || !currentAddress) {
+      setBalance(null)
+      return
+    }
+
     let active = true
-    aptosClient
-      .getAccountAPTAmount({ accountAddress: address })
-      .then((octa) => {
-        if (active) setBalance(Number(octa) / 100_000_000)
-      })
-      .catch((err) => {
-        console.error('[Aptos balance]', err)
+    setBalance(null)
+
+    const fetchBalance = async () => {
+      try {
+        if (video.chain === 'APT') {
+          const octa = await aptosClient.getAccountAPTAmount({
+            accountAddress: currentAddress,
+          })
+          if (active) setBalance(Number(octa) / 100_000_000)
+        } else if (video.chain === 'ETH') {
+          const result = await getBalance(ethConfig, {
+            address: currentAddress as `0x${string}`,
+            chainId: sepolia.id,
+          })
+          if (active) setBalance(Number(formatEther(result.value)))
+        } else if (video.chain === 'SOL' && sol.publicKey) {
+          const lamports = await connection.getBalance(sol.publicKey)
+          if (active) setBalance(lamports / LAMPORTS_PER_SOL)
+        }
+      } catch (err) {
+        console.error('[Balance fetch]', err)
         if (active) setBalance(0)
-      })
+      }
+    }
+
+    fetchBalance()
     return () => {
       active = false
     }
-  }, [isOpen, account?.address, result])
+  }, [
+    isOpen,
+    video?.chain,
+    currentAddress,
+    ethConfig,
+    connection,
+    sol.publicKey,
+    result,
+  ])
 
   useEffect(() => {
     if (!isOpen) return
@@ -78,42 +133,63 @@ function TipModal({ video, isOpen, onClose }: Props) {
     }
   }, [isOpen])
 
-  if (!isOpen || !video) return null
+  if (!isOpen || !video || !config) return null
 
   const amount =
     selection === 'custom' ? Number(customAmount) : (selection as number)
-  const amountValid = Number.isFinite(amount) && amount >= MIN_TIP
-  const balanceLow = balance !== null && balance < MIN_TIP
+  const amountValid = Number.isFinite(amount) && amount >= config.minAmount
+  const balanceLow = balance !== null && balance < config.minAmount
   const insufficient = balance !== null && amountValid && amount > balance
-  const hasRecipient = video.recipient && video.recipient.length > 0
+  const hasRecipient = config.recipient && config.recipient.length > 0
   const canSend =
     !loading &&
     amountValid &&
     !insufficient &&
     !balanceLow &&
     hasRecipient &&
-    !!account?.address
+    !!currentAddress
 
   const handleSend = async () => {
-    if (!canSend || !video) return
+    if (!canSend || !video || !config) return
     setLoading(true)
     setError(null)
 
     try {
-      const payload = buildTipPayload({
-        recipientAddress: video.recipient,
-        amountApt: amount,
-      })
+      let hash: string
 
-      const response = await signAndSubmitTransaction({ data: payload })
-      await aptosClient.waitForTransaction({
-        transactionHash: response.hash,
-      })
+      if (video.chain === 'APT') {
+        const payload = buildTipPayload({
+          recipientAddress: config.recipient,
+          amountApt: amount,
+        })
+        const response = await aptos.signAndSubmitTransaction({
+          data: payload,
+        })
+        await aptosClient.waitForTransaction({
+          transactionHash: response.hash,
+        })
+        hash = response.hash
+      } else if (video.chain === 'ETH') {
+        const ethResult = await sendEthTip({
+          recipient: config.recipient,
+          amountEth: amount,
+          config: ethConfig,
+        })
+        hash = ethResult.hash
+      } else {
+        const solResult = await sendSolTip({
+          recipient: config.recipient,
+          amountSol: amount,
+          wallet: sol,
+          connection,
+        })
+        hash = solResult.hash
+      }
 
       setResult({
-        hash: response.hash,
+        hash,
         amount,
-        recipient: video.recipient,
+        recipient: config.recipient,
       })
     } catch (err) {
       const message =
@@ -121,13 +197,18 @@ function TipModal({ video, isOpen, onClose }: Props) {
           ? String((err as { message: unknown }).message)
           : ''
 
-      if (message.includes('rejected') || message.includes('User rejected')) {
+      if (
+        message.includes('rejected') ||
+        message.includes('User rejected') ||
+        message.includes('User denied') ||
+        message.includes('WalletSendTransactionError')
+      ) {
         setError('Transaction cancelled')
       } else if (
         message.includes('INSUFFICIENT_BALANCE') ||
         message.toLowerCase().includes('insufficient')
       ) {
-        setError('Not enough APT for tip + gas')
+        setError(`Not enough ${config.symbol} for tip + gas`)
       } else if (message.includes('Simulation')) {
         setError('Network simulation failed. Try a smaller amount or refresh.')
       } else {
@@ -139,8 +220,10 @@ function TipModal({ video, isOpen, onClose }: Props) {
   }
 
   const usdEstimate = amountValid
-    ? `≈ $${(amount * APT_USD_RATE).toFixed(2)} USD`
-    : `≈ $0.00 USD`
+    ? `≈ $${(amount * config.usdRate).toFixed(2)} USD`
+    : '≈ $0.00 USD'
+
+  const customPlaceholder = (config.minAmount * 5).toString()
 
   return createPortal(
     <div
@@ -167,7 +250,12 @@ function TipModal({ video, isOpen, onClose }: Props) {
         </button>
 
         {result ? (
-          <TipSuccess result={result} video={video} onClose={onClose} />
+          <TipSuccess
+            result={result}
+            video={video}
+            config={config}
+            onClose={onClose}
+          />
         ) : (
           <>
             <header className="tip-header">
@@ -186,23 +274,25 @@ function TipModal({ video, isOpen, onClose }: Props) {
 
             {balanceLow ? (
               <div className="tip-faucet">
-                <p className="tip-faucet-message">Top up testnet APT first</p>
+                <p className="tip-faucet-message">
+                  Top up testnet {config.symbol} first
+                </p>
                 <a
                   className="tip-faucet-link"
-                  href="https://faucet.testnet.aptoslabs.com"
+                  href={config.faucetUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Get testnet APT
+                  Get testnet {config.symbol}
                 </a>
               </div>
             ) : null}
 
             <div className="tip-presets">
-              {PRESETS.map((preset) => (
+              {config.presets.map((preset) => (
                 <PresetButton
                   key={preset}
-                  label={`${preset} APT`}
+                  label={`${preset} ${config.symbol}`}
                   active={selection === preset}
                   onClick={() => setSelection(preset)}
                 />
@@ -221,29 +311,32 @@ function TipModal({ video, isOpen, onClose }: Props) {
                 <input
                   className="tip-custom-input"
                   type="number"
-                  step="0.001"
-                  min={MIN_TIP}
-                  placeholder="0.005"
+                  step={config.minAmount}
+                  min={config.minAmount}
+                  placeholder={customPlaceholder}
                   value={customAmount}
                   onChange={(e) => setCustomAmount(e.target.value)}
                   autoFocus
                 />
-                <span className="tip-custom-suffix">APT</span>
+                <span className="tip-custom-suffix">{config.symbol}</span>
               </div>
             )}
 
             <div className="tip-balance">
               {balance === null
                 ? 'Loading balance...'
-                : `Balance: ${balance.toFixed(4)} APT`}
+                : `Balance: ${balance.toFixed(4)} ${config.symbol}`}
             </div>
 
             {error && <div className="tip-error">{error}</div>}
-            {!error && selection === 'custom' && customAmount && !amountValid && (
-              <div className="tip-error">
-                Minimum tip is {MIN_TIP} APT
-              </div>
-            )}
+            {!error &&
+              selection === 'custom' &&
+              customAmount &&
+              !amountValid && (
+                <div className="tip-error">
+                  Minimum tip is {config.minAmount} {config.symbol}
+                </div>
+              )}
             {!error && insufficient && (
               <div className="tip-error">Insufficient balance</div>
             )}

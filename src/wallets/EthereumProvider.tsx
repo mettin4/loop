@@ -1,12 +1,13 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { PropsWithChildren } from 'react'
 import { WagmiProvider, createConfig, http } from 'wagmi'
-import { mainnet } from 'wagmi/chains'
+import { mainnet, sepolia } from 'wagmi/chains'
 
 const config = createConfig({
-  chains: [mainnet],
+  chains: [mainnet, sepolia],
   transports: {
     [mainnet.id]: http(),
+    [sepolia.id]: http('https://ethereum-sepolia-rpc.publicnode.com'),
   },
 })
 

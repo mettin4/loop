@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FeedVideo } from '../../types/video'
-import { getExplorerTxUrl, type TipResult } from '../../lib/aptosTip'
+import type { TipResult } from '../../lib/aptosTip'
+import type { TipConfig } from '../../lib/tipConfig'
 import { shortAddress } from '../../lib/formatAddress'
 
 function CopyIcon({ size = 16 }: { size?: number }) {
@@ -60,10 +61,11 @@ function ExternalIcon({ size = 14 }: { size?: number }) {
 interface Props {
   result: TipResult
   video: FeedVideo
+  config: TipConfig
   onClose: () => void
 }
 
-function TipSuccess({ result, video, onClose }: Props) {
+function TipSuccess({ result, video, config, onClose }: Props) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
@@ -83,7 +85,7 @@ function TipSuccess({ result, video, onClose }: Props) {
       </div>
       <h2 className="tip-success-title">Tipped</h2>
       <p className="tip-success-amount">
-        {result.amount} APT to {video.username}
+        {result.amount} {config.symbol} to {video.username}
       </p>
 
       <div className="tip-success-tx">
@@ -105,11 +107,11 @@ function TipSuccess({ result, video, onClose }: Props) {
 
       <a
         className="tip-success-explorer"
-        href={getExplorerTxUrl(result.hash)}
+        href={config.getExplorerTxUrl(result.hash)}
         target="_blank"
         rel="noopener noreferrer"
       >
-        <span>View on Aptos Explorer</span>
+        <span>View on {config.explorerName}</span>
         <ExternalIcon size={14} />
       </a>
 

@@ -5,19 +5,13 @@ import AmbientGlow from '../components/feed/AmbientGlow'
 import CreatorPanel from '../components/feed/CreatorPanel'
 import VideoCard from '../components/feed/VideoCard'
 import { MutedIcon, UnmutedIcon } from '../components/feed/icons'
-import ComingSoonToast from '../components/tip/ComingSoonToast'
 import TipModal from '../components/tip/TipModal'
 import { feedVideos } from '../data/feedVideos'
+import { tipConfigs } from '../lib/tipConfig'
 import type { FeedVideo } from '../types/video'
 import { useLoopWallet } from '../wallets/useLoopWallet'
 import { useWalletModal } from '../wallets/WalletModalContext'
 import './Feed.css'
-
-function chainName(chain: FeedVideo['chain']): string {
-  if (chain === 'ETH') return 'Ethereum'
-  if (chain === 'SOL') return 'Solana'
-  return 'Aptos'
-}
 
 function Feed() {
   const [searchParams] = useSearchParams()
@@ -33,7 +27,6 @@ function Feed() {
   const [following, setFollowing] = useState<Set<string>>(new Set())
   const [liked, setLiked] = useState<Set<string>>(new Set())
   const [tipVideo, setTipVideo] = useState<FeedVideo | null>(null)
-  const [toastMessage, setToastMessage] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const wallet = useLoopWallet()
@@ -105,13 +98,11 @@ function Feed() {
     const video = activeVideo
     if (!video) return
 
-    if (video.chain === 'ETH' || video.chain === 'SOL') {
-      setToastMessage(`Tipping on ${chainName(video.chain)} coming soon`)
-      return
-    }
+    const config = tipConfigs[video.chain]
+    const ecosystem = config.ecosystem
 
-    if (!wallet.aptos.connected) {
-      walletModal.open({ preselect: 'aptos' })
+    if (!wallet[ecosystem].connected) {
+      walletModal.open({ preselect: ecosystem })
       return
     }
 
@@ -166,13 +157,6 @@ function Feed() {
         isOpen={!!tipVideo}
         onClose={() => setTipVideo(null)}
       />
-
-      {toastMessage && (
-        <ComingSoonToast
-          message={toastMessage}
-          onDismiss={() => setToastMessage(null)}
-        />
-      )}
     </div>
   )
 }

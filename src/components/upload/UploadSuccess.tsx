@@ -59,7 +59,7 @@ function ExternalIcon({ size = 14 }: { size?: number }) {
   )
 }
 
-function QueueIcon({ size = 16 }: { size?: number }) {
+function StoredIcon({ size = 16 }: { size?: number }) {
   return (
     <svg
       width={size}
@@ -67,12 +67,30 @@ function QueueIcon({ size = 16 }: { size?: number }) {
       viewBox="0 0 16 16"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.4"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="3 8 7 12 13 4" />
+    </svg>
+  )
+}
+
+function FailedIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
       <circle cx="8" cy="8" r="6.5" />
-      <polyline points="8 4.5 8 8 10.5 9.5" />
+      <line x1="8" y1="5" x2="8" y2="9" />
+      <circle cx="8" cy="11.4" r="0.6" fill="currentColor" stroke="none" />
     </svg>
   )
 }
@@ -90,6 +108,7 @@ function truncateCaption(text: string, max = 60): string {
 
 function UploadSuccess({ result, caption, onDone }: Props) {
   const [copied, setCopied] = useState(false)
+  const [blobCopied, setBlobCopied] = useState(false)
 
   const handleCopy = async () => {
     try {
@@ -101,12 +120,24 @@ function UploadSuccess({ result, caption, onDone }: Props) {
     }
   }
 
+  const handleBlobCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(result.blobName)
+      setBlobCopied(true)
+      setTimeout(() => setBlobCopied(false), 1600)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   return (
     <div className="upload-success">
       <div className="upload-success-pulse" aria-hidden="true">
         <span className="upload-success-dot" />
       </div>
-      <h2 className="upload-success-title">Video posted to Loop</h2>
+      <h2 className="upload-success-title">
+        {result.blobUploaded ? 'Video posted to Loop' : 'Registered on-chain'}
+      </h2>
       <p className="upload-success-caption">
         Posted as: {truncateCaption(caption)}
       </p>
@@ -138,23 +169,65 @@ function UploadSuccess({ result, caption, onDone }: Props) {
         <ExternalIcon size={14} />
       </a>
 
-      {!result.blobUploaded && (
-        <div className="upload-success-queue">
-          <div className="upload-success-queue-row">
+      {result.blobUploaded ? (
+        <div className="upload-success-storage">
+          <div className="upload-success-stored-row">
             <span
-              className="upload-success-queue-icon"
+              className="upload-success-storage-icon"
               aria-hidden="true"
             >
-              <QueueIcon size={16} />
+              <StoredIcon size={16} />
             </span>
-            <span className="upload-success-queue-text">
-              Storage upload queued - Early Access pending
+            <span className="upload-success-storage-text">
+              Stored on Shelby
             </span>
           </div>
-          <p className="upload-success-queue-helper">
-            Your video is registered on-chain. Storage upload will complete
-            when Shelby Early Access is granted.
-          </p>
+          <div className="upload-success-blob">
+            <span className="upload-success-tx-label">Blob</span>
+            <button
+              type="button"
+              className="upload-success-tx-row"
+              onClick={handleBlobCopy}
+              aria-label="Copy blob name"
+            >
+              <span className="upload-success-blob-name">
+                {result.blobName}
+              </span>
+              <span className="upload-success-tx-copy">
+                {blobCopied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
+              </span>
+            </button>
+          </div>
+          {result.blobExplorerUrl && (
+            <a
+              className="upload-success-explorer"
+              href={result.blobExplorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span>View on Shelby Explorer</span>
+              <ExternalIcon size={14} />
+            </a>
+          )}
+        </div>
+      ) : (
+        <div className="upload-success-storage">
+          <div className="upload-success-failed-row">
+            <span
+              className="upload-success-storage-icon"
+              aria-hidden="true"
+            >
+              <FailedIcon size={16} />
+            </span>
+            <span className="upload-success-storage-text">
+              Storage upload failed
+            </span>
+          </div>
+          {result.uploadError && (
+            <p className="upload-success-storage-helper">
+              {result.uploadError}
+            </p>
+          )}
         </div>
       )}
 

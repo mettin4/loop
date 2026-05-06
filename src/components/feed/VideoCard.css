@@ -115,6 +115,33 @@
   color: #f0abfc;
 }
 
+.video-overlay-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.video-network {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid currentColor;
+}
+
+.video-network-aptos-testnet {
+  color: #fde68a;
+}
+.video-network-shelbynet {
+  color: rgba(255, 255, 255, 0.55);
+}
+
 .video-counter {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -140,4 +167,21 @@
   background: var(--accent);
   border-radius: 2px;
   transition: width 100ms linear;
+}
+
+.video-load-error {
+  position: absolute;
+  bottom: 36px;
+  left: 16px;
+  right: 16px;
+  z-index: 3;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255, 51, 102, 0.18);
+  border: 0.5px solid rgba(255, 51, 102, 0.5);
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-size: 12px;
+  text-align: center;
+  pointer-events: none;
 }

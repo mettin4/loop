@@ -32,7 +32,7 @@ function ChainSelector({ value, onComingSoon }: Props) {
         </button>
       </div>
       <p className="upload-chain-note">
-        APT live on Shelbynet. ETH and SOL coming soon.
+        APT live via Shelby. ETH and SOL chains coming soon.
       </p>
     </div>
   )

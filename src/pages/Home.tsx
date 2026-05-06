@@ -22,7 +22,7 @@ function Home() {
         <div className="hero-grain" aria-hidden="true" />
         <div className="hero-scanlines" aria-hidden="true" />
         <div className="hero-content">
-          <div className="hero-meta">LOOP / V0.1 / SHELBYNET</div>
+          <div className="hero-meta">LOOP / V0.1 / SHELBY</div>
           <h1 className="hero-title">
             Videos that no one
             <br />

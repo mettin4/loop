@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import ActionStack from '../components/feed/ActionStack'
 import AmbientGlow from '../components/feed/AmbientGlow'
@@ -7,18 +7,61 @@ import VideoCard from '../components/feed/VideoCard'
 import { MutedIcon, UnmutedIcon } from '../components/feed/icons'
 import TipModal from '../components/tip/TipModal'
 import { feedVideos } from '../data/feedVideos'
+import { shortAddress } from '../lib/formatAddress'
 import { tipConfigs } from '../lib/tipConfig'
+import {
+  getShelbyBlobMediaUrl,
+  getUploadedVideos,
+  networkOf,
+  type StoredVideo,
+} from '../lib/videoStorage'
 import type { FeedVideo } from '../types/video'
 import { useLoopWallet } from '../wallets/useLoopWallet'
 import { useWalletModal } from '../wallets/WalletModalContext'
 import './Feed.css'
 
+function avatarFor(seed: string): string {
+  return `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(seed)}`
+}
+
+function uploadedToFeedVideo(stored: StoredVideo): FeedVideo {
+  const handle = `@${shortAddress(stored.uploaderAddress, 4, 4)}`
+  const network = networkOf(stored)
+  return {
+    id: `uploaded:${stored.id}`,
+    username: handle,
+    avatar: avatarFor(stored.uploaderAddress),
+    bio: 'Uploaded to Loop',
+    caption: stored.caption || 'Untitled',
+    chain: stored.chain,
+    dominantColor: '#1a1a1a',
+    duration: 0,
+    likes: 0,
+    comments: 0,
+    tips: 0,
+    shares: 0,
+    videoUrl: getShelbyBlobMediaUrl(network, stored.ownerAddress, stored.blobName),
+    isUploaded: true,
+    network,
+    ownerAddress: stored.ownerAddress,
+    blobName: stored.blobName,
+    blobExplorerUrl: stored.blobExplorerUrl,
+    txHash: stored.txHash,
+  }
+}
+
 function Feed() {
   const [searchParams] = useSearchParams()
   const requestedVideoId = searchParams.get('v')
+
+  const videos = useMemo<FeedVideo[]>(() => {
+    const uploaded = getUploadedVideos().map(uploadedToFeedVideo)
+    return [...uploaded, ...feedVideos]
+  }, [])
+
   const initialIndex = (() => {
     if (!requestedVideoId) return 0
-    const idx = feedVideos.findIndex((v) => v.id === requestedVideoId)
+    const idx = videos.findIndex((v) => v.id === requestedVideoId)
     return idx >= 0 ? idx : 0
   })()
 
@@ -72,9 +115,9 @@ function Feed() {
 
     cards.forEach((c) => observer.observe(c))
     return () => observer.disconnect()
-  }, [])
+  }, [videos.length])
 
-  const activeVideo = feedVideos[activeIndex] ?? feedVideos[0]
+  const activeVideo = videos[activeIndex] ?? videos[0]
 
   const toggleFollow = (username: string) => {
     setFollowing((prev) => {
@@ -129,12 +172,12 @@ function Feed() {
       </button>
 
       <div className="feed-container" ref={containerRef}>
-        {feedVideos.map((video, i) => (
+        {videos.map((video, i) => (
           <VideoCard
             key={video.id}
             video={video}
             index={i}
-            total={feedVideos.length}
+            total={videos.length}
             isActive={i === activeIndex}
             isLiked={liked.has(video.id)}
             muted={muted}

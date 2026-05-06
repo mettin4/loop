@@ -2,7 +2,6 @@ import {
   AccountAddress,
   Aptos,
   AptosConfig,
-  Network,
 } from '@aptos-labs/ts-sdk'
 import {
   ShelbyClient,
@@ -10,14 +9,20 @@ import {
   createDefaultErasureCodingProvider,
   ShelbyBlobClient,
   expectedTotalChunksets,
+  getShelbyBlobExplorerUrl,
 } from '@shelby-protocol/sdk/browser'
+import { SHELBY_CONFIG, type ShelbyMode } from './shelbyNetwork'
 
-const aptosConfig = new AptosConfig({ network: Network.SHELBYNET })
+const aptosConfig = new AptosConfig({ network: SHELBY_CONFIG.network })
 export const shelbyAptosClient = new Aptos(aptosConfig)
 
+const rawApiKey = import.meta.env.VITE_SHELBY_API_KEY as string | undefined
+const shelbyApiKey =
+  rawApiKey && rawApiKey.trim().length > 0 ? rawApiKey.trim() : undefined
+
 export const shelbyClient = new ShelbyClient({
-  network: Network.SHELBYNET,
-  apiKey: import.meta.env.VITE_SHELBY_API_KEY as string,
+  network: SHELBY_CONFIG.network,
+  ...(shelbyApiKey ? { apiKey: shelbyApiKey } : {}),
 })
 
 export type UploadStage =
@@ -40,6 +45,9 @@ export interface UploadResult {
   blobName: string
   blobUploaded: boolean
   uploadError?: string
+  blobExplorerUrl?: string
+  ownerAddress: string
+  network: ShelbyMode
 }
 
 function generateBlobName(caption: string): string {
@@ -108,12 +116,20 @@ export async function uploadVideoToShelby(
     })
     blobUploaded = true
   } catch (err) {
-    const message = err instanceof Error ? err.message : ''
+    const message = err instanceof Error ? err.message : String(err)
     if (message.includes('401') || message.includes('Unauthorized')) {
-      uploadError = 'Early Access required'
+      uploadError =
+        'Storage upload rejected by Shelby RPC (401). Check VITE_SHELBY_API_KEY.'
+    } else if (
+      message.includes('not been registered') ||
+      message.includes('EBLOB_NOT_FOUND')
+    ) {
+      uploadError =
+        'Blob registration TX did not propagate before upload. Try again.'
     } else {
       uploadError = message || 'Storage upload failed'
     }
+    console.error('[shelby] putBlob failed:', err)
   }
 
   onProgress('complete')
@@ -123,11 +139,20 @@ export async function uploadVideoToShelby(
     blobName,
     blobUploaded,
     uploadError,
+    ownerAddress: accountAddress.toString(),
+    network: SHELBY_CONFIG.mode,
+    blobExplorerUrl: blobUploaded
+      ? getShelbyBlobExplorerUrl(
+          SHELBY_CONFIG.network,
+          accountAddress.toString(),
+          blobName,
+        )
+      : undefined,
   }
 }
 
-export const SHELBYNET_EXPLORER_URL = 'https://explorer.aptoslabs.com'
+const APTOS_EXPLORER_URL = 'https://explorer.aptoslabs.com'
 
 export function getShelbyExplorerUrl(hash: string): string {
-  return `${SHELBYNET_EXPLORER_URL}/txn/${hash}?network=shelbynet`
+  return `${APTOS_EXPLORER_URL}/txn/${hash}?network=${SHELBY_CONFIG.aptosExplorerNetwork}`
 }

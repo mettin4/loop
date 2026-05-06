@@ -15,6 +15,7 @@ import {
   type UploadResult,
   type UploadStage,
 } from '../lib/shelbyUpload'
+import { saveUploadedVideo } from '../lib/videoStorage'
 import { useLoopWallet } from '../wallets/useLoopWallet'
 import { useWalletModal } from '../wallets/WalletModalContext'
 
@@ -75,6 +76,21 @@ function Upload() {
         signAndSubmitTransaction: aptos.signAndSubmitTransaction,
         onProgress: setProgressStage,
       })
+
+      if (uploadResult.blobUploaded && uploadResult.blobExplorerUrl) {
+        saveUploadedVideo({
+          id: uploadResult.blobName,
+          blobName: uploadResult.blobName,
+          caption: caption.trim(),
+          uploaderAddress: String(aptos.account.address),
+          chain: 'APT',
+          txHash: uploadResult.hash,
+          uploadedAt: Date.now(),
+          ownerAddress: uploadResult.ownerAddress,
+          blobExplorerUrl: uploadResult.blobExplorerUrl,
+          network: uploadResult.network,
+        })
+      }
 
       setResult(uploadResult)
       setStage('success')

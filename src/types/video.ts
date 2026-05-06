@@ -11,4 +11,11 @@ export interface FeedVideo {
   comments: number
   tips: number
   shares: number
+  videoUrl?: string
+  isUploaded?: boolean
+  network?: 'shelbynet' | 'aptos-testnet'
+  ownerAddress?: string
+  blobName?: string
+  blobExplorerUrl?: string
+  txHash?: string
 }

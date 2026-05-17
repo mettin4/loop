@@ -26,14 +26,19 @@ function safeParse(raw: string | null): StoredVideo[] {
   try {
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return parsed.filter(
-      (v): v is StoredVideo =>
-        v &&
-        typeof v === 'object' &&
-        typeof v.id === 'string' &&
-        typeof v.blobName === 'string' &&
-        typeof v.ownerAddress === 'string',
-    )
+    return parsed
+      .filter(
+        (v): v is StoredVideo =>
+          v &&
+          typeof v === 'object' &&
+          typeof v.id === 'string' &&
+          typeof v.blobName === 'string' &&
+          typeof v.ownerAddress === 'string',
+      )
+      .map((v) => ({
+        ...v,
+        chain: (v.chain as UploadedChain) || 'APT',
+      }))
   } catch {
     return []
   }

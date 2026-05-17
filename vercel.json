@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/v/:owner/:blobName",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(Twitterbot|facebookexternalhit|LinkedInBot|Discordbot|Slackbot|TelegramBot|WhatsApp|bot|crawler|spider).*"
+        }
+      ],
+      "destination": "/api/og?owner=:owner&blobName=:blobName"
+    },
+    { "source": "/(.*)", "destination": "/" }
+  ]
+}

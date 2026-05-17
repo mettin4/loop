@@ -11,6 +11,7 @@ interface Props {
   isActive: boolean
   isLiked: boolean
   muted: boolean
+  preloadHint: 'auto' | 'metadata' | 'none'
   onLike: () => void
 }
 
@@ -21,29 +22,48 @@ function VideoCard({
   isActive,
   isLiked,
   muted,
+  preloadHint,
   onLike,
 }: Props) {
   const [isPlaying, setIsPlaying] = useState(true)
   const [progress, setProgress] = useState(0)
   const [burstKey, setBurstKey] = useState(0)
   const [loadFailed, setLoadFailed] = useState(false)
+  const [isBuffered, setIsBuffered] = useState(false)
   const tapTimeoutRef = useRef<number | null>(null)
   const lastTapRef = useRef(0)
   const videoRef = useRef<HTMLVideoElement>(null)
   const hasRealVideo = !!video.videoUrl
 
   useEffect(() => {
+    setIsBuffered(false)
+    setLoadFailed(false)
+  }, [video.videoUrl])
+
+  useEffect(() => {
     const el = videoRef.current
     if (!el || !hasRealVideo) return
-    if (isActive && isPlaying) {
+
+    if (!isActive || !isPlaying) {
+      el.pause()
+      if (!isActive) el.currentTime = 0
+      return
+    }
+
+    const tryPlay = () => {
       el.play().catch(() => {
         /* autoplay can fail; user tap will retry */
       })
-    } else {
-      el.pause()
-      if (!isActive) el.currentTime = 0
     }
-  }, [isActive, isPlaying, hasRealVideo])
+
+    if (el.readyState >= 3) {
+      tryPlay()
+      return
+    }
+
+    el.addEventListener('canplay', tryPlay, { once: true })
+    return () => el.removeEventListener('canplay', tryPlay)
+  }, [isActive, isPlaying, hasRealVideo, video.videoUrl])
 
   useEffect(() => {
     if (hasRealVideo) return
@@ -122,10 +142,17 @@ function VideoCard({
             muted={muted}
             loop
             playsInline
-            preload="metadata"
+            preload={preloadHint}
             onTimeUpdate={handleTimeUpdate}
+            onCanPlay={() => setIsBuffered(true)}
             onError={() => setLoadFailed(true)}
           />
+        )}
+
+        {hasRealVideo && isActive && !isBuffered && !loadFailed && (
+          <div className="video-loading" aria-hidden="true">
+            <span className="video-loading-spinner" />
+          </div>
         )}
 
         <button
@@ -143,27 +170,13 @@ function VideoCard({
 
         {hasRealVideo && loadFailed && (
           <div className="video-load-error" aria-live="polite">
-            <span>Video failed to load — see console</span>
+            <span>Video failed to load. See console.</span>
           </div>
         )}
 
         <LikeBurst trigger={burstKey} />
 
         <div className="video-overlay-top">
-          <span className="video-overlay-tags">
-            <span
-              className={`video-chain video-chain-${video.chain.toLowerCase()}`}
-            >
-              {video.chain}
-            </span>
-            {video.isUploaded && video.network && (
-              <span
-                className={`video-network video-network-${video.network}`}
-              >
-                {video.network === 'aptos-testnet' ? 'TESTNET' : 'SHELBYNET'}
-              </span>
-            )}
-          </span>
           <span className="video-counter">
             {index + 1} / {total}
           </span>

@@ -9,14 +9,14 @@
 .ambient-glow-layer {
   position: absolute;
   inset: -10%;
-  filter: blur(100px) saturate(1.6);
+  filter: blur(80px) saturate(1.2);
   opacity: 0;
   transition: opacity 600ms ease;
   pointer-events: none;
 }
 
 .ambient-glow-active {
-  opacity: 0.65;
+  opacity: 0.35;
 }
 
 .ambient-glow-noise {

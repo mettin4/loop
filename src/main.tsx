@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { HelmetProvider } from 'react-helmet-async'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
@@ -8,12 +9,14 @@ import { WalletModalProvider } from './wallets/WalletModalContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <WalletProviders>
-      <WalletModalProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </WalletModalProvider>
-    </WalletProviders>
+    <HelmetProvider>
+      <WalletProviders>
+        <WalletModalProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </WalletModalProvider>
+      </WalletProviders>
+    </HelmetProvider>
   </StrictMode>,
 )

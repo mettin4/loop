@@ -1,19 +1,112 @@
+import { useMemo, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { feedVideos } from '../data/feedVideos'
+import { shortAddress } from '../lib/formatAddress'
+import {
+  getShelbyBlobMediaUrl,
+  getUploadedVideos,
+  networkOf,
+  type StoredVideo,
+} from '../lib/videoStorage'
 import './Home.css'
 
-function formatCount(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K`
-  return String(n)
+const PREVIEW_PALETTE = [
+  '#3d4d8a',
+  '#1a7a8a',
+  '#a64d2a',
+  '#6b3d8a',
+  '#a63d5a',
+  '#3d4dab',
+  '#ff3366',
+  '#00ffaa',
+]
+
+function previewColor(seed: string): string {
+  let hash = 0
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) | 0
+  }
+  return PREVIEW_PALETTE[Math.abs(hash) % PREVIEW_PALETTE.length]
 }
 
 function gradientFor(color: string): string {
   return `linear-gradient(160deg, ${color} 0%, #0a0a0a 90%)`
 }
 
+interface PreviewItem {
+  id: string
+  routeId: string
+  username: string
+  caption: string
+  videoUrl: string
+  color: string
+  chain: string
+}
+
+function toPreviewItem(stored: StoredVideo): PreviewItem {
+  const network = networkOf(stored)
+  return {
+    id: stored.id,
+    routeId: `uploaded:${stored.id}`,
+    username: `@${shortAddress(stored.uploaderAddress, 4, 4)}`,
+    caption: stored.caption || 'Untitled',
+    videoUrl: getShelbyBlobMediaUrl(network, stored.ownerAddress, stored.blobName),
+    color: previewColor(stored.uploaderAddress),
+    chain: stored.chain,
+  }
+}
+
+function PreviewCard({ item }: { item: PreviewItem }) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const seekedRef = useRef(false)
+
+  const handleLoadedMetadata = () => {
+    const el = videoRef.current
+    if (!el || seekedRef.current) return
+    if (el.duration > 1.2) {
+      try {
+        el.currentTime = 1
+        seekedRef.current = true
+      } catch {
+        /* seek can fail before metadata is fully ready in some browsers */
+      }
+    }
+  }
+
+  return (
+    <Link
+      to={`/feed?v=${encodeURIComponent(item.routeId)}`}
+      className="preview-card"
+      style={{ background: gradientFor(item.color) }}
+    >
+      <video
+        ref={videoRef}
+        className="preview-card-video"
+        src={item.videoUrl}
+        muted
+        loop
+        autoPlay
+        playsInline
+        preload="metadata"
+        onLoadedMetadata={handleLoadedMetadata}
+      />
+      <div className="preview-card-overlay" aria-hidden="true" />
+      <span
+        className={`preview-chain preview-chain-${item.chain.toLowerCase()}`}
+      >
+        {item.chain}
+      </span>
+      <span className="preview-user">{item.username}</span>
+    </Link>
+  )
+}
+
 function Home() {
   const navigate = useNavigate()
+
+  const previewItems = useMemo<PreviewItem[]>(
+    () => getUploadedVideos().map(toPreviewItem),
+    [],
+  )
 
   return (
     <div className="home">
@@ -44,10 +137,6 @@ function Home() {
             </button>
           </div>
         </div>
-        <div className="watching" aria-hidden="true">
-          <span className="watching-dot" />
-          <span className="watching-text">247 watching now</span>
-        </div>
       </section>
 
       <section className="preview">
@@ -57,27 +146,33 @@ function Home() {
             <span>LIVE NOW</span>
           </div>
         </div>
-        <div className="preview-viewport">
-          <div className="preview-track">
-            {[...feedVideos, ...feedVideos].map((v, i) => (
-              <Link
-                key={`${v.id}-${i}`}
-                to={`/feed?v=${v.id}`}
-                className="preview-card"
-                style={{ background: gradientFor(v.dominantColor) }}
-              >
-                <div className="preview-card-overlay" aria-hidden="true" />
-                <span className="preview-views">{formatCount(v.likes)}</span>
-                <span
-                  className={`preview-chain preview-chain-${v.chain.toLowerCase()}`}
-                >
-                  {v.chain}
-                </span>
-                <span className="preview-user">{v.username}</span>
-              </Link>
-            ))}
+        {previewItems.length > 0 ? (
+          <div className="preview-viewport">
+            <div className="preview-track">
+              {previewItems.map((v) => (
+                <PreviewCard key={v.id} item={v} />
+              ))}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="container">
+            <div className="preview-empty">
+              <p className="preview-empty-title">No videos uploaded yet.</p>
+              <p className="preview-empty-body">
+                Be the first to upload a video to Loop. Drop a clip from your
+                phone, sign with your wallet. It lives on Shelby. Nobody can
+                take it down.
+              </p>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => navigate('/upload')}
+              >
+                Upload a video
+              </button>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="stats">
@@ -193,15 +288,100 @@ function Home() {
 
       <section className="why" id="why">
         <div className="why-inner">
-          <p className="why-text">
-            Every platform you have ever loved has banned someone. Every video
-            you have ever watched is one takedown away from disappearing. Loop
-            is different. Your wallet is your account, your chain is your bank,
-            and no one can delete what lives on Shelby.
-          </p>
-          <div className="why-attribution">
-            <span className="why-attr-label">- LOOP MANIFESTO</span>
-            <span className="why-attr-date">EST. 2026</span>
+          <div className="why-pitch">
+            <div className="eyebrow">Why Loop?</div>
+            <h2 className="why-pitch-title">
+              A short video platform
+              <br />
+              built on Shelby.
+            </h2>
+            <p className="why-pitch-lede">
+              Videos that no one can take down.
+            </p>
+
+            <p className="why-text">
+              Every platform you have ever loved has banned someone. Every
+              video you have ever watched is one takedown away from
+              disappearing. Loop is different. Your wallet is your account,
+              your chain is your bank, and no one can delete what lives on
+              Shelby.
+            </p>
+            <div className="why-attribution">
+              <span className="why-attr-label">- LOOP MANIFESTO</span>
+              <span className="why-attr-date">EST. 2026</span>
+            </div>
+
+            <div className="why-pitch-grid">
+              <article className="why-pitch-block">
+                <div className="why-pitch-num">01</div>
+                <h3 className="why-pitch-heading">The problem</h3>
+                <p className="why-pitch-body">
+                  Every platform you use can pull your video. Sometimes for a
+                  real reason. Sometimes for nothing. Either way, you don't
+                  have a say.
+                </p>
+              </article>
+
+              <article className="why-pitch-block">
+                <div className="why-pitch-num">02</div>
+                <h3 className="why-pitch-heading">Where Loop is different</h3>
+                <p className="why-pitch-body">
+                  Loop doesn't have that lever. Videos live on Shelby, a
+                  decentralized storage network from Aptos Labs and Jump
+                  Crypto. Once a video is uploaded and registered on chain,
+                  no single party can take it down. Not Loop. Not anyone.
+                </p>
+              </article>
+
+              <article className="why-pitch-block">
+                <div className="why-pitch-num">03</div>
+                <h3 className="why-pitch-heading">Wallets, not accounts</h3>
+                <p className="why-pitch-body">
+                  Your wallet is your account. Aptos, Ethereum, or Solana, you
+                  pick. Tip a creator and the money goes straight to their
+                  wallet. No middleman, no platform fee, no waiting period.
+                </p>
+              </article>
+
+              <article className="why-pitch-block">
+                <div className="why-pitch-num">04</div>
+                <h3 className="why-pitch-heading">Built for the long run</h3>
+                <p className="why-pitch-body">
+                  Creators get paid directly. Viewers don't see ads. The
+                  platform doesn't sell your data because it doesn't have any.
+                  Loop is the connective tissue between Shelby and the people
+                  using it.
+                </p>
+              </article>
+            </div>
+
+            <div className="why-pitch-status">
+              <span className="why-pitch-status-label">Status</span>
+              <p className="why-pitch-status-body">
+                Loop runs on Aptos Testnet today. Wallet sign-in works on
+                three chains. Tipping works on three chains. Video upload
+                writes to Shelby. Paid reads, video pages, and ETH/SOL upload
+                chains are next.
+              </p>
+            </div>
+
+            <div className="why-pitch-cta">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => navigate('/feed')}
+              >
+                Try Loop
+              </button>
+              <a
+                href="https://github.com/mettin4/loop"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-outline"
+              >
+                View on GitHub
+              </a>
+            </div>
           </div>
         </div>
       </section>
@@ -210,13 +390,12 @@ function Home() {
         <div className="container">
           <div className="eyebrow">Supported chains</div>
           <div className="chains-grid">
-            <div className="chain-card chain-card-primary">
+            <div className="chain-card">
               <div className="chain-head">
                 <div className="chain-status-group">
                   <span className="chain-dot" />
                   <span className="chain-status">Online</span>
                 </div>
-                <span className="chain-tag chain-tag-primary">Primary</span>
               </div>
               <div className="chain-name">Aptos</div>
               <div className="chain-tip">Tip in APT</div>
@@ -227,7 +406,6 @@ function Home() {
                   <span className="chain-dot" />
                   <span className="chain-status">Online</span>
                 </div>
-                <span className="chain-tag">Mainnet coming</span>
               </div>
               <div className="chain-name">Ethereum</div>
               <div className="chain-tip">Tip in ETH</div>
@@ -238,7 +416,6 @@ function Home() {
                   <span className="chain-dot" />
                   <span className="chain-status">Online</span>
                 </div>
-                <span className="chain-tag">Integration ready</span>
               </div>
               <div className="chain-name">Solana</div>
               <div className="chain-tip">Tip in SOL</div>
@@ -260,16 +437,7 @@ function Home() {
             Start watching
           </button>
           <p className="cta-sub">No signup. No email. Just your wallet.</p>
-          <div className="cta-social">
-            <div className="cta-avatars" aria-hidden="true">
-              <span className="cta-avatar cta-avatar-pink">V</span>
-              <span className="cta-avatar cta-avatar-green">T</span>
-              <span className="cta-avatar cta-avatar-violet">F</span>
-            </div>
-            <span className="cta-social-text">
-              247 creators already on Loop
-            </span>
-          </div>
+          <p className="cta-status">Live on Aptos Testnet via Shelby.</p>
         </div>
       </section>
 

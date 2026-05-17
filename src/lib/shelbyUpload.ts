@@ -50,6 +50,25 @@ export interface UploadResult {
   network: ShelbyMode
 }
 
+async function verifyBlobUploaded(
+  ownerAddress: string,
+  blobName: string,
+): Promise<boolean> {
+  await new Promise((r) => setTimeout(r, 5000))
+  const segments = blobName
+    .split('/')
+    .map((s) => encodeURIComponent(s))
+    .join('/')
+  const url = `${SHELBY_CONFIG.shelbyRpcBase}/blobs/${ownerAddress}/${segments}`
+  try {
+    const res = await fetch(url, { method: 'HEAD' })
+    return res.ok
+  } catch (err) {
+    console.warn('[shelby] verifyBlobUploaded fetch failed:', err)
+    return false
+  }
+}
+
 function generateBlobName(caption: string): string {
   const slug = caption
     .toLowerCase()
@@ -108,16 +127,48 @@ export async function uploadVideoToShelby(
   let blobUploaded = false
   let uploadError: string | undefined
 
+  console.log('[shelby] putBlob start', {
+    mode: SHELBY_CONFIG.mode,
+    rpcBase: SHELBY_CONFIG.shelbyRpcBase,
+    apiKeySet: !!shelbyApiKey,
+    blobName,
+    sizeBytes: fileData.length,
+  })
+
+  const UPLOAD_TIMEOUT_MS = 120_000
+  const putBlobPromise = shelbyClient.rpc.putBlob({
+    account: account.address,
+    blobName,
+    blobData: fileData,
+  })
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(
+      () => reject(new Error('UPLOAD_TIMEOUT')),
+      UPLOAD_TIMEOUT_MS,
+    )
+  })
+
   try {
-    await shelbyClient.rpc.putBlob({
-      account: account.address,
-      blobName,
-      blobData: fileData,
-    })
+    await Promise.race([putBlobPromise, timeoutPromise])
     blobUploaded = true
+    console.log('[shelby] putBlob success', { blobName })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    if (message.includes('401') || message.includes('Unauthorized')) {
+    console.error('[shelby] putBlob failed:', err)
+
+    if (message.includes('UPLOAD_TIMEOUT')) {
+      console.log('[shelby] verifying blob after timeout', { blobName })
+      const verified = await verifyBlobUploaded(
+        accountAddress.toString(),
+        blobName,
+      )
+      if (verified) {
+        console.log('[shelby] blob verified after timeout', { blobName })
+        blobUploaded = true
+      } else {
+        uploadError = `Upload timeout after ${UPLOAD_TIMEOUT_MS / 1000}s. Blob not yet visible on Shelby RPC. Please retry.`
+      }
+    } else if (message.includes('401') || message.includes('Unauthorized')) {
       uploadError =
         'Storage upload rejected by Shelby RPC (401). Check VITE_SHELBY_API_KEY.'
     } else if (
@@ -126,10 +177,12 @@ export async function uploadVideoToShelby(
     ) {
       uploadError =
         'Blob registration TX did not propagate before upload. Try again.'
+    } else if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
+      uploadError =
+        'Network error reaching Shelby RPC. Check connection and retry.'
     } else {
       uploadError = message || 'Storage upload failed'
     }
-    console.error('[shelby] putBlob failed:', err)
   }
 
   onProgress('complete')

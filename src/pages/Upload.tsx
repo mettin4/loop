@@ -139,8 +139,10 @@ function Upload() {
         </header>
 
         {stage === 'idle' && (
-          <>
-            <div className="upload-section">
+          <div
+            className={`upload-form${file ? ' upload-form-with-preview' : ''}`}
+          >
+            <div className="upload-form-media">
               {file ? (
                 <VideoPreview
                   file={file}
@@ -154,15 +156,13 @@ function Upload() {
               )}
             </div>
 
-            <div className="upload-section">
+            <div className="upload-form-fields">
               <CaptionInput
                 value={caption}
                 onChange={setCaption}
                 maxLength={MAX_CAPTION}
               />
-            </div>
 
-            <div className="upload-section">
               <ChainSelector
                 value="APT"
                 onComingSoon={(c) =>
@@ -171,19 +171,21 @@ function Upload() {
                   )
                 }
               />
+
+              {formError && (
+                <p className="upload-form-error">{formError}</p>
+              )}
+
+              <button
+                type="button"
+                className="upload-submit"
+                onClick={handleSubmit}
+                disabled={aptosConnected ? !canSubmit : false}
+              >
+                {submitLabel}
+              </button>
             </div>
-
-            {formError && <p className="upload-form-error">{formError}</p>}
-
-            <button
-              type="button"
-              className="upload-submit"
-              onClick={handleSubmit}
-              disabled={aptosConnected ? !canSubmit : false}
-            >
-              {submitLabel}
-            </button>
-          </>
+          </div>
         )}
 
         {stage === 'uploading' && <UploadProgress stage={progressStage} />}

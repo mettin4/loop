@@ -4,7 +4,7 @@ import Home from './pages/Home'
 import Feed from './pages/Feed'
 import Upload from './pages/Upload'
 import Profile from './pages/Profile'
-import Video from './pages/Video'
+import VideoDetail from './pages/VideoDetail'
 
 function App() {
   return (
@@ -15,7 +15,7 @@ function App() {
         <Route path="/feed" element={<Feed />} />
         <Route path="/upload" element={<Upload />} />
         <Route path="/profile" element={<Profile />} />
-        <Route path="/video/:id" element={<Video />} />
+        <Route path="/v/:owner/:blobName" element={<VideoDetail />} />
       </Routes>
     </>
   )

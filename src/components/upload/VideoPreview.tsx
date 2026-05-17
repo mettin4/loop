@@ -32,9 +32,9 @@ function VideoPreview({ file, onRemove }: Props) {
             loop
             autoPlay
             playsInline
-            controls
           />
         )}
+        <span className="upload-preview-badge">Feed preview</span>
         <button
           type="button"
           className="upload-preview-remove"

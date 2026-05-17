@@ -268,7 +268,7 @@ function TipModal({ video, isOpen, onClose }: Props) {
               />
               <div className="tip-header-text">
                 <div className="tip-username">{video.username}</div>
-                <div className="tip-subtitle">Send a tip</div>
+                <div className="tip-subtitle">Tip in {config.symbol}</div>
               </div>
             </header>
 

@@ -20,6 +20,14 @@ function CreatorPanel({ video, isFollowing, onToggleFollow }: Props) {
         />
         <div className="creator-username">{video.username}</div>
         <div className="creator-bio">{video.bio}</div>
+        <div className="creator-badges">
+          <span className="creator-badge creator-badge-chain">
+            {video.chain || 'APT'}
+          </span>
+          <span className="creator-badge creator-badge-network">
+            {video.network === 'shelbynet' ? 'SHELBYNET' : 'TESTNET'}
+          </span>
+        </div>
         <button
           type="button"
           className={`creator-follow${

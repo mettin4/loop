@@ -1,52 +1,42 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import ActionStack from '../components/feed/ActionStack'
 import AmbientGlow from '../components/feed/AmbientGlow'
 import CreatorPanel from '../components/feed/CreatorPanel'
 import VideoCard from '../components/feed/VideoCard'
 import { MutedIcon, UnmutedIcon } from '../components/feed/icons'
+import ComingSoonToast from '../components/tip/ComingSoonToast'
 import TipModal from '../components/tip/TipModal'
-import { feedVideos } from '../data/feedVideos'
-import { shortAddress } from '../lib/formatAddress'
+import { uploadedToFeedVideo } from '../lib/feedVideo'
+import { copyVideoShareLink } from '../lib/shareLink'
 import { tipConfigs } from '../lib/tipConfig'
-import {
-  getShelbyBlobMediaUrl,
-  getUploadedVideos,
-  networkOf,
-  type StoredVideo,
-} from '../lib/videoStorage'
+import { getUploadedVideos } from '../lib/videoStorage'
 import type { FeedVideo } from '../types/video'
 import { useLoopWallet } from '../wallets/useLoopWallet'
 import { useWalletModal } from '../wallets/WalletModalContext'
 import './Feed.css'
 
-function avatarFor(seed: string): string {
-  return `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(seed)}`
+const LIKED_KEY = 'loop:liked-videos'
+
+function loadLikedIds(): Set<string> {
+  if (typeof window === 'undefined') return new Set()
+  try {
+    const raw = window.localStorage.getItem(LIKED_KEY)
+    if (!raw) return new Set()
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return new Set()
+    return new Set(parsed.filter((id): id is string => typeof id === 'string'))
+  } catch {
+    return new Set()
+  }
 }
 
-function uploadedToFeedVideo(stored: StoredVideo): FeedVideo {
-  const handle = `@${shortAddress(stored.uploaderAddress, 4, 4)}`
-  const network = networkOf(stored)
-  return {
-    id: `uploaded:${stored.id}`,
-    username: handle,
-    avatar: avatarFor(stored.uploaderAddress),
-    bio: 'Uploaded to Loop',
-    caption: stored.caption || 'Untitled',
-    chain: stored.chain,
-    dominantColor: '#1a1a1a',
-    duration: 0,
-    likes: 0,
-    comments: 0,
-    tips: 0,
-    shares: 0,
-    videoUrl: getShelbyBlobMediaUrl(network, stored.ownerAddress, stored.blobName),
-    isUploaded: true,
-    network,
-    ownerAddress: stored.ownerAddress,
-    blobName: stored.blobName,
-    blobExplorerUrl: stored.blobExplorerUrl,
-    txHash: stored.txHash,
+function persistLikedIds(ids: Set<string>): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(LIKED_KEY, JSON.stringify(Array.from(ids)))
+  } catch {
+    /* quota exceeded, silently drop */
   }
 }
 
@@ -54,10 +44,10 @@ function Feed() {
   const [searchParams] = useSearchParams()
   const requestedVideoId = searchParams.get('v')
 
-  const videos = useMemo<FeedVideo[]>(() => {
-    const uploaded = getUploadedVideos().map(uploadedToFeedVideo)
-    return [...uploaded, ...feedVideos]
-  }, [])
+  const videos = useMemo<FeedVideo[]>(
+    () => getUploadedVideos().map(uploadedToFeedVideo),
+    [],
+  )
 
   const initialIndex = (() => {
     if (!requestedVideoId) return 0
@@ -67,9 +57,9 @@ function Feed() {
 
   const [activeIndex, setActiveIndex] = useState(initialIndex)
   const [muted, setMuted] = useState(true)
-  const [following, setFollowing] = useState<Set<string>>(new Set())
-  const [liked, setLiked] = useState<Set<string>>(new Set())
+  const [liked, setLiked] = useState<Set<string>>(() => loadLikedIds())
   const [tipVideo, setTipVideo] = useState<FeedVideo | null>(null)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const wallet = useLoopWallet()
@@ -117,22 +107,14 @@ function Feed() {
     return () => observer.disconnect()
   }, [videos.length])
 
-  const activeVideo = videos[activeIndex] ?? videos[0]
-
-  const toggleFollow = (username: string) => {
-    setFollowing((prev) => {
-      const next = new Set(prev)
-      if (next.has(username)) next.delete(username)
-      else next.add(username)
-      return next
-    })
-  }
+  const activeVideo: FeedVideo | undefined = videos[activeIndex] ?? videos[0]
 
   const toggleLike = (id: string) => {
     setLiked((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
+      persistLikedIds(next)
       return next
     })
   }
@@ -152,14 +134,35 @@ function Feed() {
     setTipVideo(video)
   }
 
+  const handleShare = async () => {
+    const video = activeVideo
+    if (!video || !video.ownerAddress || !video.blobName) return
+    const ok = await copyVideoShareLink(video.ownerAddress, video.blobName)
+    setToastMessage(ok ? 'Link copied' : 'Could not copy link')
+  }
+
+  if (!activeVideo) {
+    return (
+      <div className="feed-page">
+        <div className="feed-empty">
+          <p className="feed-empty-title">No videos yet.</p>
+          <p className="feed-empty-body">Be the first to upload.</p>
+          <Link to="/upload" className="btn btn-primary">
+            Upload a video
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="feed-page">
       <AmbientGlow color={activeVideo.dominantColor} />
 
       <CreatorPanel
         video={activeVideo}
-        isFollowing={following.has(activeVideo.username)}
-        onToggleFollow={() => toggleFollow(activeVideo.username)}
+        isFollowing={false}
+        onToggleFollow={() => setToastMessage('Follow coming soon')}
       />
 
       <button
@@ -172,27 +175,33 @@ function Feed() {
       </button>
 
       <div className="feed-container" ref={containerRef}>
-        {videos.map((video, i) => (
-          <VideoCard
-            key={video.id}
-            video={video}
-            index={i}
-            total={videos.length}
-            isActive={i === activeIndex}
-            isLiked={liked.has(video.id)}
-            muted={muted}
-            onLike={() => toggleLike(video.id)}
-          />
-        ))}
+        {videos.map((video, i) => {
+          const distance = Math.abs(i - activeIndex)
+          const preloadHint: 'auto' | 'metadata' | 'none' =
+            distance === 0 ? 'auto' : distance === 1 ? 'metadata' : 'none'
+          return (
+            <VideoCard
+              key={video.id}
+              video={video}
+              index={i}
+              total={videos.length}
+              isActive={i === activeIndex}
+              isLiked={liked.has(video.id)}
+              muted={muted}
+              preloadHint={preloadHint}
+              onLike={() => toggleLike(video.id)}
+            />
+          )
+        })}
       </div>
 
       <ActionStack
         video={activeVideo}
         isLiked={liked.has(activeVideo.id)}
         onLike={() => toggleLike(activeVideo.id)}
-        onComment={() => console.log('comment', activeVideo.id)}
+        onComment={() => setToastMessage('Comments coming soon')}
         onTip={handleTip}
-        onShare={() => console.log('share', activeVideo.id)}
+        onShare={handleShare}
       />
 
       <TipModal
@@ -200,6 +209,13 @@ function Feed() {
         isOpen={!!tipVideo}
         onClose={() => setTipVideo(null)}
       />
+
+      {toastMessage && (
+        <ComingSoonToast
+          message={toastMessage}
+          onDismiss={() => setToastMessage(null)}
+        />
+      )}
     </div>
   )
 }

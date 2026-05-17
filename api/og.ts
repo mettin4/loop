@@ -55,21 +55,18 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   <meta property="og:description" content="${escapedDesc}" />
   <meta property="og:type" content="video.other" />
   <meta property="og:url" content="${escapedPage}" />
+  <meta property="og:image" content="${escapedVideo}" />
   <meta property="og:video" content="${escapedVideo}" />
   <meta property="og:video:secure_url" content="${escapedVideo}" />
   <meta property="og:video:type" content="video/mp4" />
   <meta property="og:video:width" content="1080" />
   <meta property="og:video:height" content="1920" />
 
-  <meta name="twitter:card" content="player" />
+  <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:site" content="@0xmeto_" />
   <meta name="twitter:title" content="${escapedTitle}" />
   <meta name="twitter:description" content="${escapedDesc}" />
-  <meta name="twitter:player" content="${escapedPage}" />
-  <meta name="twitter:player:width" content="1080" />
-  <meta name="twitter:player:height" content="1920" />
-  <meta name="twitter:player:stream" content="${escapedVideo}" />
-  <meta name="twitter:player:stream:content_type" content="video/mp4" />
+  <meta name="twitter:image" content="${escapedVideo}" />
 </head>
 <body>
   <p>Video by @${shortOwner}. <a href="${escapedPage}">Open on Loop</a></p>

@@ -37,6 +37,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   const safeBlobName = encodeURIComponent(blobName)
   const videoUrl = `${RPC_BASE}/blobs/${safeOwner}/${safeBlobName}`
   const pageUrl = `${SITE_ORIGIN}/v/${safeOwner}/${safeBlobName}`
+  const ogImage = `${SITE_ORIGIN}/og-image.png`
   const title = `Video by @${shortOwner} on Loop`
   const description = 'Watch on Loop. Videos that no one can take down.'
 
@@ -44,6 +45,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   const escapedDesc = escapeHtml(description)
   const escapedVideo = escapeHtml(videoUrl)
   const escapedPage = escapeHtml(pageUrl)
+  const escapedImage = escapeHtml(ogImage)
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -55,7 +57,9 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   <meta property="og:description" content="${escapedDesc}" />
   <meta property="og:type" content="video.other" />
   <meta property="og:url" content="${escapedPage}" />
-  <meta property="og:image" content="${escapedVideo}" />
+  <meta property="og:image" content="${escapedImage}" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
   <meta property="og:video" content="${escapedVideo}" />
   <meta property="og:video:secure_url" content="${escapedVideo}" />
   <meta property="og:video:type" content="video/mp4" />
@@ -66,7 +70,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   <meta name="twitter:site" content="@0xmeto_" />
   <meta name="twitter:title" content="${escapedTitle}" />
   <meta name="twitter:description" content="${escapedDesc}" />
-  <meta name="twitter:image" content="${escapedVideo}" />
+  <meta name="twitter:image" content="${escapedImage}" />
 </head>
 <body>
   <p>Video by @${shortOwner}. <a href="${escapedPage}">Open on Loop</a></p>

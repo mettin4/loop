@@ -72,19 +72,33 @@ function PreviewCard({ item }: { item: PreviewItem }) {
     }
   }
 
+  const handleMouseEnter = () => {
+    const el = videoRef.current
+    if (!el) return
+    el.currentTime = 0
+    el.play().catch(() => {})
+  }
+
+  const handleMouseLeave = () => {
+    const el = videoRef.current
+    if (!el) return
+    el.pause()
+    if (el.duration > 1.2) el.currentTime = 1
+  }
+
   return (
     <Link
       to={`/feed?v=${encodeURIComponent(item.routeId)}`}
       className="preview-card"
       style={{ background: gradientFor(item.color) }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <video
         ref={videoRef}
         className="preview-card-video"
         src={item.videoUrl}
         muted
-        loop
-        autoPlay
         playsInline
         preload="metadata"
         onLoadedMetadata={handleLoadedMetadata}

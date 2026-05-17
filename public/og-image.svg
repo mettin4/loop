@@ -1,63 +1,54 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
   <defs>
-    <radialGradient id="bg" cx="22%" cy="38%" r="70%">
-      <stop offset="0%" stop-color="#1a0d14" />
-      <stop offset="60%" stop-color="#0a0a0a" />
-      <stop offset="100%" stop-color="#000000" />
+    <radialGradient id="cornerGlow" cx="0%" cy="0%" r="55%">
+      <stop offset="0%" stop-color="#ff3366" stop-opacity="0.28" />
+      <stop offset="55%" stop-color="#ff3366" stop-opacity="0.06" />
+      <stop offset="100%" stop-color="#ff3366" stop-opacity="0" />
     </radialGradient>
-    <linearGradient id="accentGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ff3366" stop-opacity="0.35" />
-      <stop offset="100%" stop-color="#00ffaa" stop-opacity="0.10" />
-    </linearGradient>
   </defs>
 
-  <rect width="1200" height="630" fill="url(#bg)" />
-  <circle cx="240" cy="240" r="280" fill="url(#accentGlow)" />
+  <rect width="1200" height="630" fill="#000000" />
+  <rect width="1200" height="630" fill="url(#cornerGlow)" />
 
-  <g transform="translate(96, 200)">
-    <circle cx="32" cy="32" r="28" fill="none" stroke="#ff3366" stroke-width="3" />
-    <circle cx="32" cy="32" r="12" fill="#ff3366" />
+  <g transform="translate(495, 270)">
+    <circle cx="30" cy="30" r="26" fill="none" stroke="#ff3366" stroke-width="3" />
+    <circle cx="30" cy="30" r="11" fill="#ff3366" />
   </g>
 
-  <text x="180" y="248"
-        font-family="Georgia, 'Times New Roman', serif"
+  <text x="562" y="320"
+        font-family="'Instrument Serif', Georgia, 'Times New Roman', serif"
         font-style="italic"
-        font-size="108"
+        font-size="84"
         font-weight="400"
         fill="#ffffff">
     Loop
   </text>
 
-  <text x="98" y="340"
-        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif"
-        font-size="40"
+  <text x="600" y="400"
+        text-anchor="middle"
+        font-family="'Instrument Serif', Georgia, 'Times New Roman', serif"
+        font-style="italic"
+        font-size="32"
         font-weight="400"
-        fill="rgba(255, 255, 255, 0.85)">
+        fill="rgba(255, 255, 255, 0.92)">
     Videos that no one can take down.
   </text>
 
-  <text x="98" y="400"
+  <text x="600" y="460"
+        text-anchor="middle"
         font-family="ui-monospace, 'SF Mono', Menlo, monospace"
-        font-size="20"
-        letter-spacing="4"
-        fill="rgba(255, 255, 255, 0.5)">
-    SHORT VIDEOS, ON-CHAIN, ON SHELBY
-  </text>
-
-  <text x="98" y="560"
-        font-family="ui-monospace, 'SF Mono', Menlo, monospace"
-        font-size="18"
-        letter-spacing="3"
-        fill="rgba(0, 255, 170, 0.7)">
+        font-size="14"
+        letter-spacing="5"
+        fill="#00e676">
     LIVE ON APTOS TESTNET
   </text>
 
-  <text x="1102" y="560"
+  <text x="1170" y="600"
         text-anchor="end"
         font-family="ui-monospace, 'SF Mono', Menlo, monospace"
-        font-size="18"
-        letter-spacing="3"
+        font-size="12"
+        letter-spacing="1.5"
         fill="rgba(255, 255, 255, 0.4)">
-    LOOP-CHI-TEN.VERCEL.APP
+    loop-chi-ten.vercel.app
   </text>
 </svg>

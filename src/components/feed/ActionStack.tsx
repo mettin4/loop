@@ -25,8 +25,6 @@ function ActionStack({
   onTip,
   onShare,
 }: Props) {
-  const likeCount = video.likes + (isLiked ? 1 : 0)
-
   return (
     <div className="action-stack">
       <div className="action-item">
@@ -39,7 +37,7 @@ function ActionStack({
         >
           <HeartIcon size={22} filled={isLiked} />
         </button>
-        <span className="action-count">{formatCount(likeCount)}</span>
+        <span className="action-count">{formatCount(video.likes)}</span>
       </div>
 
       <div className="action-item">

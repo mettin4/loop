@@ -133,6 +133,140 @@
   color: var(--accent);
 }
 
+/* ===== TABS ===== */
+.profile-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 24px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 0.5px solid rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.profile-tab {
+  padding: 8px 20px;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.profile-tab:hover {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.profile-tab-active {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+/* ===== ACTIVITY FEED ===== */
+.profile-activity {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-activity-status {
+  margin: 32px 0;
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.profile-activity-error {
+  color: var(--accent);
+}
+
+.profile-activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-activity-list > li {
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.05);
+}
+
+.profile-activity-list > li:last-child {
+  border-bottom: none;
+}
+
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 0.18s ease;
+}
+
+.activity-item-link:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.activity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 8px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.activity-dot-like {
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(255, 51, 102, 0.5);
+}
+
+.activity-dot-comment {
+  background: #ffd54f;
+}
+
+.activity-dot-follow {
+  background: #00e676;
+}
+
+.activity-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.activity-text {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.activity-text strong {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+}
+
+.activity-time {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.35);
+}
+
 /* ===== EMPTY STATE ===== */
 .profile-videos-empty-block {
   margin-top: 32px;

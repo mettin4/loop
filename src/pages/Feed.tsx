@@ -1,12 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import ActionStack from '../components/feed/ActionStack'
 import AmbientGlow from '../components/feed/AmbientGlow'
+import CommentDrawer from '../components/feed/CommentDrawer'
 import CreatorPanel from '../components/feed/CreatorPanel'
 import VideoCard from '../components/feed/VideoCard'
 import { MutedIcon, UnmutedIcon } from '../components/feed/icons'
 import ComingSoonToast from '../components/tip/ComingSoonToast'
 import TipModal from '../components/tip/TipModal'
+import {
+  getComments,
+  getFollow,
+  getLikes,
+  toggleFollow,
+  toggleLike,
+} from '../lib/api'
 import { uploadedToFeedVideo } from '../lib/feedVideo'
 import { copyVideoShareLink } from '../lib/shareLink'
 import { tipConfigs } from '../lib/tipConfig'
@@ -58,12 +66,28 @@ function Feed() {
   const [activeIndex, setActiveIndex] = useState(initialIndex)
   const [muted, setMuted] = useState(true)
   const [liked, setLiked] = useState<Set<string>>(() => loadLikedIds())
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({})
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
+  const [followState, setFollowState] = useState<
+    Record<string, { isFollowing: boolean; count: number }>
+  >({})
+  const [followPending, setFollowPending] = useState<Set<string>>(new Set())
   const [tipVideo, setTipVideo] = useState<FeedVideo | null>(null)
+  const [commentVideo, setCommentVideo] = useState<FeedVideo | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const fetchedLikes = useRef<Set<string>>(new Set())
+  const fetchedComments = useRef<Set<string>>(new Set())
+  const fetchedFollow = useRef<Set<string>>(new Set())
 
   const wallet = useLoopWallet()
   const walletModal = useWalletModal()
+
+  const userAddress =
+    wallet.aptos.address ??
+    wallet.ethereum.address ??
+    wallet.solana.address ??
+    null
 
   useEffect(() => {
     if (!requestedVideoId) return
@@ -109,15 +133,121 @@ function Feed() {
 
   const activeVideo: FeedVideo | undefined = videos[activeIndex] ?? videos[0]
 
-  const toggleLike = (id: string) => {
-    setLiked((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      persistLikedIds(next)
-      return next
-    })
-  }
+  useEffect(() => {
+    const video = activeVideo
+    if (!video) return
+    if (fetchedLikes.current.has(video.id)) {
+      if (userAddress) {
+        getLikes(video.id, userAddress)
+          .then((r) => {
+            setLikeCounts((p) => ({ ...p, [video.id]: r.count }))
+            setLiked((prev) => {
+              const next = new Set(prev)
+              if (r.isLiked) next.add(video.id)
+              else next.delete(video.id)
+              persistLikedIds(next)
+              return next
+            })
+          })
+          .catch(() => {})
+      }
+      return
+    }
+    fetchedLikes.current.add(video.id)
+    getLikes(video.id, userAddress ?? undefined)
+      .then((r) => {
+        setLikeCounts((p) => ({ ...p, [video.id]: r.count }))
+        if (userAddress) {
+          setLiked((prev) => {
+            const next = new Set(prev)
+            if (r.isLiked) next.add(video.id)
+            else next.delete(video.id)
+            persistLikedIds(next)
+            return next
+          })
+        }
+      })
+      .catch(() => {})
+  }, [activeVideo, userAddress])
+
+  useEffect(() => {
+    const video = activeVideo
+    if (!video) return
+    if (fetchedComments.current.has(video.id)) return
+    fetchedComments.current.add(video.id)
+    getComments(video.id)
+      .then((r) => {
+        setCommentCounts((p) => ({ ...p, [video.id]: r.count }))
+      })
+      .catch(() => {})
+  }, [activeVideo])
+
+  useEffect(() => {
+    const video = activeVideo
+    if (!video || !video.ownerAddress) return
+    const cacheKey = `${video.ownerAddress}::${userAddress ?? ''}`
+    if (fetchedFollow.current.has(cacheKey)) return
+    fetchedFollow.current.add(cacheKey)
+    getFollow(video.ownerAddress, userAddress ?? undefined)
+      .then((r) => {
+        setFollowState((p) => ({
+          ...p,
+          [video.ownerAddress as string]: {
+            isFollowing: r.isFollowing,
+            count: r.count,
+          },
+        }))
+      })
+      .catch(() => {})
+  }, [activeVideo, userAddress])
+
+  const handleToggleLike = useCallback(
+    (video: FeedVideo) => {
+      if (!userAddress) {
+        walletModal.open()
+        return
+      }
+      const id = video.id
+      const wasLiked = liked.has(id)
+      const prevCount = likeCounts[id] ?? 0
+
+      setLiked((prev) => {
+        const next = new Set(prev)
+        if (wasLiked) next.delete(id)
+        else next.add(id)
+        persistLikedIds(next)
+        return next
+      })
+      setLikeCounts((p) => ({
+        ...p,
+        [id]: Math.max(0, prevCount + (wasLiked ? -1 : 1)),
+      }))
+
+      toggleLike(id, userAddress, video.ownerAddress, video.caption)
+        .then((r) => {
+          setLikeCounts((p) => ({ ...p, [id]: r.count }))
+          setLiked((prev) => {
+            const next = new Set(prev)
+            if (r.isLiked) next.add(id)
+            else next.delete(id)
+            persistLikedIds(next)
+            return next
+          })
+        })
+        .catch(() => {
+          setLiked((prev) => {
+            const next = new Set(prev)
+            if (wasLiked) next.add(id)
+            else next.delete(id)
+            persistLikedIds(next)
+            return next
+          })
+          setLikeCounts((p) => ({ ...p, [id]: prevCount }))
+          setToastMessage("Couldn't sync like")
+        })
+    },
+    [userAddress, walletModal, liked, likeCounts],
+  )
 
   const handleTip = () => {
     const video = activeVideo
@@ -141,6 +271,58 @@ function Feed() {
     setToastMessage(ok ? 'Link copied' : 'Could not copy link')
   }
 
+  const handleOpenComments = () => {
+    const video = activeVideo
+    if (!video) return
+    setCommentVideo(video)
+  }
+
+  const handleToggleFollow = () => {
+    const video = activeVideo
+    if (!video || !video.ownerAddress) return
+    if (!userAddress) {
+      walletModal.open()
+      return
+    }
+    const target = video.ownerAddress
+    if (target.toLowerCase() === userAddress.toLowerCase()) return
+    if (followPending.has(target)) return
+
+    const current = followState[target] ?? { isFollowing: false, count: 0 }
+    const optimistic = {
+      isFollowing: !current.isFollowing,
+      count: Math.max(0, current.count + (current.isFollowing ? -1 : 1)),
+    }
+    setFollowState((p) => ({ ...p, [target]: optimistic }))
+    setFollowPending((p) => new Set(p).add(target))
+
+    toggleFollow(target, userAddress)
+      .then((r) => {
+        setFollowState((p) => ({
+          ...p,
+          [target]: { isFollowing: r.isFollowing, count: r.count },
+        }))
+      })
+      .catch(() => {
+        setFollowState((p) => ({ ...p, [target]: current }))
+        setToastMessage("Couldn't sync follow")
+      })
+      .finally(() => {
+        setFollowPending((p) => {
+          const next = new Set(p)
+          next.delete(target)
+          return next
+        })
+      })
+  }
+
+  const handleCommentCountChange = useCallback(
+    (videoId: string, count: number) => {
+      setCommentCounts((p) => ({ ...p, [videoId]: count }))
+    },
+    [],
+  )
+
   if (!activeVideo) {
     return (
       <div className="feed-page">
@@ -155,14 +337,29 @@ function Feed() {
     )
   }
 
+  const activeOwner = activeVideo.ownerAddress ?? ''
+  const activeFollow = activeOwner ? followState[activeOwner] : undefined
+  const isSelfActive =
+    !!userAddress &&
+    !!activeOwner &&
+    userAddress.toLowerCase() === activeOwner.toLowerCase()
+
+  const activeVideoForDisplay: FeedVideo = {
+    ...activeVideo,
+    likes: likeCounts[activeVideo.id] ?? activeVideo.likes,
+    comments: commentCounts[activeVideo.id] ?? activeVideo.comments,
+  }
+
   return (
     <div className="feed-page">
       <AmbientGlow color={activeVideo.dominantColor} />
 
       <CreatorPanel
         video={activeVideo}
-        isFollowing={false}
-        onToggleFollow={() => setToastMessage('Follow coming soon')}
+        isFollowing={!!activeFollow?.isFollowing}
+        isSelf={isSelfActive}
+        isPending={!!activeOwner && followPending.has(activeOwner)}
+        onToggleFollow={handleToggleFollow}
       />
 
       <button
@@ -189,17 +386,17 @@ function Feed() {
               isLiked={liked.has(video.id)}
               muted={muted}
               preloadHint={preloadHint}
-              onLike={() => toggleLike(video.id)}
+              onLike={() => handleToggleLike(video)}
             />
           )
         })}
       </div>
 
       <ActionStack
-        video={activeVideo}
+        video={activeVideoForDisplay}
         isLiked={liked.has(activeVideo.id)}
-        onLike={() => toggleLike(activeVideo.id)}
-        onComment={() => setToastMessage('Comments coming soon')}
+        onLike={() => handleToggleLike(activeVideo)}
+        onComment={handleOpenComments}
         onTip={handleTip}
         onShare={handleShare}
       />
@@ -208,6 +405,19 @@ function Feed() {
         video={tipVideo}
         isOpen={!!tipVideo}
         onClose={() => setTipVideo(null)}
+      />
+
+      <CommentDrawer
+        isOpen={!!commentVideo}
+        videoId={commentVideo?.id ?? null}
+        ownerAddress={commentVideo?.ownerAddress}
+        userAddress={userAddress}
+        onClose={() => setCommentVideo(null)}
+        onConnectWallet={() => {
+          setCommentVideo(null)
+          walletModal.open()
+        }}
+        onCountChange={handleCommentCountChange}
       />
 
       {toastMessage && (

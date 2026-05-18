@@ -227,6 +227,8 @@ function VideoDetail() {
       <CreatorPanel
         video={video}
         isFollowing={false}
+        isSelf={false}
+        isPending={false}
         onToggleFollow={() => setToastMessage('Follow coming soon')}
       />
 

@@ -5,6 +5,7 @@ import {
   EthereumIcon,
   SolanaIcon,
 } from '../components/wallet/icons'
+import { getActivity, type ActivityEventRecord } from '../lib/api'
 import { shortAddress } from '../lib/formatAddress'
 import {
   getShelbyBlobMediaUrl,
@@ -194,9 +195,83 @@ function ChainBadge({ icon, label }: ChainBadgeProps) {
   )
 }
 
+function activityRelativeTime(ts: number): string {
+  const diff = Date.now() - ts
+  const min = 60_000
+  const hr = 60 * min
+  const day = 24 * hr
+  if (diff < min) return 'just now'
+  if (diff < hr) return `${Math.floor(diff / min)}m ago`
+  if (diff < day) return `${Math.floor(diff / hr)}h ago`
+  if (diff < 7 * day) return `${Math.floor(diff / day)}d ago`
+  return new Date(ts).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+interface ActivityItemProps {
+  event: ActivityEventRecord
+}
+
+function ActivityItem({ event }: ActivityItemProps) {
+  const handle = `@${shortAddress(event.from, 4, 4)}`
+  const time = activityRelativeTime(event.timestamp)
+
+  let body: React.ReactNode
+  if (event.type === 'like') {
+    body = (
+      <>
+        <strong>{handle}</strong> liked your video
+        {event.text ? <> &lsquo;{event.text}&rsquo;</> : null}
+      </>
+    )
+  } else if (event.type === 'comment') {
+    body = (
+      <>
+        <strong>{handle}</strong> commented on your video
+        {event.text ? <>: &ldquo;{event.text}&rdquo;</> : null}
+      </>
+    )
+  } else {
+    body = (
+      <>
+        <strong>{handle}</strong> started following you
+      </>
+    )
+  }
+
+  const linkTo = event.videoId ? `/feed?v=${encodeURIComponent(event.videoId)}` : null
+
+  const inner = (
+    <>
+      <span className={`activity-dot activity-dot-${event.type}`} aria-hidden="true" />
+      <div className="activity-body">
+        <p className="activity-text">{body}</p>
+        <span className="activity-time">{time}</span>
+      </div>
+    </>
+  )
+
+  if (linkTo) {
+    return (
+      <Link to={linkTo} className="activity-item activity-item-link">
+        {inner}
+      </Link>
+    )
+  }
+  return <div className="activity-item">{inner}</div>
+}
+
+type ProfileTab = 'videos' | 'activity'
+
 function Profile() {
   const navigate = useNavigate()
   const wallet = useLoopWallet()
+  const [tab, setTab] = useState<ProfileTab>('videos')
+  const [activity, setActivity] = useState<ActivityEventRecord[]>([])
+  const [activityLoading, setActivityLoading] = useState(false)
+  const [activityError, setActivityError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!wallet.isAnyConnected) {
@@ -206,18 +281,40 @@ function Profile() {
 
   const aptosAddress = wallet.aptos.address
 
-  const videos = useMemo<StoredVideo[]>(() => {
-    if (!aptosAddress) return []
-    return getUploadedVideosByOwner(aptosAddress)
-  }, [aptosAddress])
-
-  if (!wallet.isAnyConnected) return null
-
   const primaryAddress =
     wallet.aptos.address ??
     wallet.ethereum.address ??
     wallet.solana.address ??
     ''
+
+  const videos = useMemo<StoredVideo[]>(() => {
+    if (!aptosAddress) return []
+    return getUploadedVideosByOwner(aptosAddress)
+  }, [aptosAddress])
+
+  useEffect(() => {
+    if (tab !== 'activity' || !primaryAddress) return
+    let cancelled = false
+    setActivityLoading(true)
+    setActivityError(null)
+    getActivity(primaryAddress)
+      .then((r) => {
+        if (cancelled) return
+        setActivity(r.events)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setActivityError('Could not load activity')
+      })
+      .finally(() => {
+        if (!cancelled) setActivityLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [tab, primaryAddress])
+
+  if (!wallet.isAnyConnected) return null
 
   const handleDisconnectAll = () => {
     if (wallet.aptos.connected) wallet.aptos.disconnect()
@@ -275,36 +372,88 @@ function Profile() {
           </button>
         </header>
 
-        {!aptosAddress && (
-          <div className="profile-videos-empty-block">
-            <p className="profile-videos-empty">
-              Connect Aptos to see your videos.
-            </p>
-          </div>
+        <nav className="profile-tabs" role="tablist" aria-label="Profile sections">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'videos'}
+            className={`profile-tab${tab === 'videos' ? ' profile-tab-active' : ''}`}
+            onClick={() => setTab('videos')}
+          >
+            Videos
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'activity'}
+            className={`profile-tab${tab === 'activity' ? ' profile-tab-active' : ''}`}
+            onClick={() => setTab('activity')}
+          >
+            Activity
+          </button>
+        </nav>
+
+        {tab === 'videos' && (
+          <>
+            {!aptosAddress && (
+              <div className="profile-videos-empty-block">
+                <p className="profile-videos-empty">
+                  Connect Aptos to see your videos.
+                </p>
+              </div>
+            )}
+
+            {aptosAddress && videos.length === 0 && (
+              <div className="profile-videos-empty-block">
+                <p className="profile-videos-empty">
+                  No videos yet. Upload your first one.
+                </p>
+                <Link to="/upload" className="profile-empty-cta">
+                  Upload your first video
+                </Link>
+              </div>
+            )}
+
+            {videos.length === 1 && (
+              <div className="profile-single-video">
+                <ProfileVideoCard video={videos[0]} />
+              </div>
+            )}
+
+            {videos.length > 1 && (
+              <div className="profile-videos-grid">
+                {videos.map((v) => (
+                  <ProfileVideoCard key={v.id} video={v} />
+                ))}
+              </div>
+            )}
+          </>
         )}
 
-        {aptosAddress && videos.length === 0 && (
-          <div className="profile-videos-empty-block">
-            <p className="profile-videos-empty">
-              No videos yet. Upload your first one.
-            </p>
-            <Link to="/upload" className="profile-empty-cta">
-              Upload your first video
-            </Link>
-          </div>
-        )}
-
-        {videos.length === 1 && (
-          <div className="profile-single-video">
-            <ProfileVideoCard video={videos[0]} />
-          </div>
-        )}
-
-        {videos.length > 1 && (
-          <div className="profile-videos-grid">
-            {videos.map((v) => (
-              <ProfileVideoCard key={v.id} video={v} />
-            ))}
+        {tab === 'activity' && (
+          <div className="profile-activity">
+            {activityLoading && (
+              <p className="profile-activity-status">Loading activity...</p>
+            )}
+            {activityError && !activityLoading && (
+              <p className="profile-activity-status profile-activity-error">
+                {activityError}
+              </p>
+            )}
+            {!activityLoading && !activityError && activity.length === 0 && (
+              <div className="profile-videos-empty-block">
+                <p className="profile-videos-empty">No activity yet</p>
+              </div>
+            )}
+            {!activityLoading && activity.length > 0 && (
+              <ul className="profile-activity-list">
+                {activity.map((event, i) => (
+                  <li key={`${event.timestamp}-${i}`}>
+                    <ActivityItem event={event} />
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </div>

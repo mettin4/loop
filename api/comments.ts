@@ -5,7 +5,7 @@ import {
   pushActivity,
   readString,
   redis,
-} from '../src/lib/redis'
+} from './_lib/redis'
 
 interface StoredComment {
   author: string

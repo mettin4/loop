@@ -5,7 +5,7 @@ import {
   pushActivity,
   readString,
   redis,
-} from '../src/lib/redis'
+} from './_lib/redis'
 
 export default async function handler(
   req: VercelRequest,

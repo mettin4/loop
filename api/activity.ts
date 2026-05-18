@@ -4,7 +4,7 @@ import {
   readString,
   redis,
   type ActivityEvent,
-} from '../src/lib/redis'
+} from './_lib/redis'
 
 export default async function handler(
   req: VercelRequest,

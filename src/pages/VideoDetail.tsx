@@ -233,10 +233,14 @@ function VideoDetail() {
       <ActionStack
         video={video}
         isLiked={liked.has(video.id)}
+        isSelf={false}
+        isFollowing={false}
+        isPending={false}
         onLike={() => toggleLike(video.id)}
         onComment={() => setToastMessage('Comments coming soon')}
         onTip={handleTip}
         onShare={handleShare}
+        onToggleFollow={() => setToastMessage('Follow coming soon')}
       />
 
       <TipModal

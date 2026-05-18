@@ -16,13 +16,6 @@ function CreatorPanel({
   isPending,
   onToggleFollow,
 }: Props) {
-  console.log('[follow render]', {
-    isSelf,
-    isFollowing,
-    isPending,
-    shouldShowButton: !isSelf,
-  })
-
   return (
     <aside className="creator-panel" aria-label="Creator info">
       <div className="creator-panel-inner" key={video.id}>

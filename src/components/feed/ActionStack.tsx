@@ -11,22 +11,47 @@ function formatCount(n: number): string {
 interface Props {
   video: FeedVideo
   isLiked: boolean
+  isSelf: boolean
+  isFollowing: boolean
+  isPending: boolean
   onLike: () => void
   onComment: () => void
   onTip: () => void
   onShare: () => void
+  onToggleFollow: () => void
 }
 
 function ActionStack({
   video,
   isLiked,
+  isSelf,
+  isFollowing,
+  isPending,
   onLike,
   onComment,
   onTip,
   onShare,
+  onToggleFollow,
 }: Props) {
   return (
     <div className="action-stack">
+      {!isSelf && (
+        <button
+          type="button"
+          className={`action-button action-follow${
+            isFollowing ? ' action-follow-active' : ''
+          }`}
+          onClick={onToggleFollow}
+          disabled={isPending}
+          aria-label={isFollowing ? 'Unfollow' : 'Follow'}
+        >
+          <span className="action-icon">{isFollowing ? '✓' : '+'}</span>
+          <span className="action-label">
+            {isFollowing ? 'Following' : 'Follow'}
+          </span>
+        </button>
+      )}
+
       <div className="action-item">
         <button
           type="button"

@@ -343,12 +343,8 @@ function Feed() {
     !!userAddress &&
     !!activeOwner &&
     userAddress.toLowerCase() === activeOwner.toLowerCase()
-
-  console.log('[follow] isSelf check', {
-    currentAddress: userAddress,
-    ownerAddress: activeVideo.ownerAddress,
-    isSelf: isSelfActive,
-  })
+  const activeIsFollowing = !!activeFollow?.isFollowing
+  const activeIsPending = !!activeOwner && followPending.has(activeOwner)
 
   const activeVideoForDisplay: FeedVideo = {
     ...activeVideo,
@@ -362,9 +358,9 @@ function Feed() {
 
       <CreatorPanel
         video={activeVideo}
-        isFollowing={!!activeFollow?.isFollowing}
+        isFollowing={activeIsFollowing}
         isSelf={isSelfActive}
-        isPending={!!activeOwner && followPending.has(activeOwner)}
+        isPending={activeIsPending}
         onToggleFollow={handleToggleFollow}
       />
 
@@ -401,10 +397,14 @@ function Feed() {
       <ActionStack
         video={activeVideoForDisplay}
         isLiked={liked.has(activeVideo.id)}
+        isSelf={isSelfActive}
+        isFollowing={activeIsFollowing}
+        isPending={activeIsPending}
         onLike={() => handleToggleLike(activeVideo)}
         onComment={handleOpenComments}
         onTip={handleTip}
         onShare={handleShare}
+        onToggleFollow={handleToggleFollow}
       />
 
       <TipModal

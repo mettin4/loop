@@ -1,10 +1,31 @@
+import { Redis } from '@upstash/redis'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import {
-  isValidAddress,
-  readString,
-  redis,
-  type ActivityEvent,
-} from './_lib/redis'
+
+const redis = Redis.fromEnv()
+
+interface ActivityEvent {
+  type: 'like' | 'comment' | 'follow'
+  from: string
+  videoId?: string
+  text?: string
+  timestamp: number
+}
+
+function readString(
+  value: string | string[] | undefined,
+): string | undefined {
+  if (Array.isArray(value)) return value[0]
+  return value
+}
+
+function isValidAddress(addr: unknown): addr is string {
+  return (
+    typeof addr === 'string' &&
+    addr.startsWith('0x') &&
+    addr.length >= 10 &&
+    addr.length <= 128
+  )
+}
 
 export default async function handler(
   req: VercelRequest,

@@ -1,11 +1,44 @@
+import { Redis } from '@upstash/redis'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import {
-  isValidAddress,
-  isValidVideoId,
-  pushActivity,
-  readString,
-  redis,
-} from './_lib/redis'
+
+const redis = Redis.fromEnv()
+
+interface ActivityEvent {
+  type: 'like' | 'comment' | 'follow'
+  from: string
+  videoId?: string
+  text?: string
+  timestamp: number
+}
+
+function readString(
+  value: string | string[] | undefined,
+): string | undefined {
+  if (Array.isArray(value)) return value[0]
+  return value
+}
+
+function isValidAddress(addr: unknown): addr is string {
+  return (
+    typeof addr === 'string' &&
+    addr.startsWith('0x') &&
+    addr.length >= 10 &&
+    addr.length <= 128
+  )
+}
+
+function isValidVideoId(id: unknown): id is string {
+  return typeof id === 'string' && id.length > 0 && id.length <= 256
+}
+
+async function pushActivity(
+  targetAddress: string,
+  event: ActivityEvent,
+): Promise<void> {
+  const key = `activity:${targetAddress}`
+  await redis.lpush(key, JSON.stringify(event))
+  await redis.ltrim(key, 0, 199)
+}
 
 export default async function handler(
   req: VercelRequest,

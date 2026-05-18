@@ -21,15 +21,25 @@ export interface CommentsResponse {
 }
 
 export interface ActivityEventRecord {
-  type: 'like' | 'comment' | 'follow'
+  type: 'like' | 'comment' | 'follow' | 'tip'
   from: string
   videoId?: string
   text?: string
+  amount?: number
+  chain?: string
   timestamp: number
 }
 
 export interface ActivityResponse {
   events: ActivityEventRecord[]
+}
+
+export interface PushTipActivityInput {
+  targetAddress: string
+  from: string
+  videoId?: string
+  amount: number
+  chain: string
 }
 
 async function postJson<T>(url: string, body: unknown): Promise<T> {
@@ -118,4 +128,17 @@ export function addComment(
 export function getActivity(userAddress: string): Promise<ActivityResponse> {
   const q = new URLSearchParams({ userAddress })
   return getJson<ActivityResponse>(`/api/activity?${q.toString()}`)
+}
+
+export function pushTipActivity(
+  input: PushTipActivityInput,
+): Promise<{ ok: boolean }> {
+  return postJson<{ ok: boolean }>('/api/activity', {
+    type: 'tip',
+    targetAddress: input.targetAddress,
+    from: input.from,
+    videoId: input.videoId,
+    amount: input.amount,
+    chain: input.chain,
+  })
 }

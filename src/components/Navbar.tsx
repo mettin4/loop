@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
+import NotificationBell from './NotificationBell'
 import ConnectedBadge from './wallet/ConnectedBadge'
 import { useLoopWallet } from '../wallets/useLoopWallet'
 import { useWalletModal } from '../wallets/WalletModalContext'
@@ -75,7 +76,20 @@ function Navbar() {
 
       <div className="navbar-wallet">
         {wallet.isAnyConnected ? (
-          <ConnectedBadge wallet={wallet} onClick={() => walletModal.open()} />
+          <>
+            <ConnectedBadge wallet={wallet} onClick={() => walletModal.open()} />
+            {(wallet.aptos.address ??
+              wallet.ethereum.address ??
+              wallet.solana.address) && (
+              <NotificationBell
+                walletAddress={
+                  (wallet.aptos.address ??
+                    wallet.ethereum.address ??
+                    wallet.solana.address) as string
+                }
+              />
+            )}
+          </>
         ) : (
           <button
             type="button"

@@ -71,6 +71,9 @@
 .navbar-wallet {
   position: relative;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .navbar-wallet-btn {

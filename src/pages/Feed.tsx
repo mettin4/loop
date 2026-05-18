@@ -344,6 +344,12 @@ function Feed() {
     !!activeOwner &&
     userAddress.toLowerCase() === activeOwner.toLowerCase()
 
+  console.log('[follow] isSelf check', {
+    currentAddress: userAddress,
+    ownerAddress: activeVideo.ownerAddress,
+    isSelf: isSelfActive,
+  })
+
   const activeVideoForDisplay: FeedVideo = {
     ...activeVideo,
     likes: likeCounts[activeVideo.id] ?? activeVideo.likes,

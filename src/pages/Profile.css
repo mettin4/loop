@@ -238,6 +238,11 @@
   background: #00e676;
 }
 
+.activity-dot-tip {
+  background: #29b6f6;
+  box-shadow: 0 0 8px rgba(41, 182, 246, 0.5);
+}
+
 .activity-body {
   display: flex;
   flex-direction: column;

@@ -10,6 +10,7 @@ import { formatEther } from 'viem'
 import { useAccount, useConfig } from 'wagmi'
 import { getBalance } from 'wagmi/actions'
 import { sepolia } from 'wagmi/chains'
+import { pushTipActivity } from '../../lib/api'
 import {
   aptosClient,
   buildTipPayload,
@@ -191,6 +192,18 @@ function TipModal({ video, isOpen, onClose }: Props) {
         amount,
         recipient: config.recipient,
       })
+
+      if (video.ownerAddress && currentAddress) {
+        pushTipActivity({
+          targetAddress: video.ownerAddress,
+          from: currentAddress,
+          videoId: video.id,
+          amount,
+          chain: config.symbol,
+        }).catch((err) => {
+          console.error('[tip activity push] failed:', err)
+        })
+      }
     } catch (err) {
       const message =
         err && typeof err === 'object' && 'message' in err

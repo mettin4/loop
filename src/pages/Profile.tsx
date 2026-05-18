@@ -233,6 +233,13 @@ function ActivityItem({ event }: ActivityItemProps) {
         {event.text ? <>: &ldquo;{event.text}&rdquo;</> : null}
       </>
     )
+  } else if (event.type === 'tip') {
+    body = (
+      <>
+        <strong>{handle}</strong> tipped you {event.amount ?? 0}{' '}
+        {event.chain ?? ''}
+      </>
+    )
   } else {
     body = (
       <>

@@ -57,24 +57,15 @@ function toPreviewItem(stored: StoredVideo): PreviewItem {
 
 function PreviewCard({ item }: { item: PreviewItem }) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const seekedRef = useRef(false)
-
-  const handleLoadedMetadata = () => {
-    const el = videoRef.current
-    if (!el || seekedRef.current) return
-    if (el.duration > 1.2) {
-      try {
-        el.currentTime = 1
-        seekedRef.current = true
-      } catch {
-        /* seek can fail before metadata is fully ready in some browsers */
-      }
-    }
-  }
+  const loadedRef = useRef(false)
 
   const handleMouseEnter = () => {
     const el = videoRef.current
     if (!el) return
+    if (!loadedRef.current) {
+      el.load()
+      loadedRef.current = true
+    }
     el.currentTime = 0
     el.play().catch(() => {})
   }
@@ -83,7 +74,6 @@ function PreviewCard({ item }: { item: PreviewItem }) {
     const el = videoRef.current
     if (!el) return
     el.pause()
-    if (el.duration > 1.2) el.currentTime = 1
   }
 
   return (
@@ -100,8 +90,7 @@ function PreviewCard({ item }: { item: PreviewItem }) {
         src={item.videoUrl}
         muted
         playsInline
-        preload="metadata"
-        onLoadedMetadata={handleLoadedMetadata}
+        preload="none"
       />
       <div className="preview-card-overlay" aria-hidden="true" />
       <span

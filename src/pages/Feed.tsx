@@ -281,7 +281,7 @@ function Feed() {
     const video = activeVideo
     if (!video || !video.ownerAddress) return
     if (!userAddress) {
-      walletModal.open()
+      setToastMessage('Connect wallet to follow')
       return
     }
     const target = video.ownerAddress

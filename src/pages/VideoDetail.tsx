@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import ActionStack from '../components/feed/ActionStack'
@@ -50,8 +50,6 @@ function persistLikedIds(ids: Set<string>): void {
   }
 }
 
-type ExistenceState = 'checking' | 'found' | 'missing'
-
 function buildFallbackVideo(
   owner: string,
   blobName: string,
@@ -95,7 +93,6 @@ function VideoDetail() {
     return buildFallbackVideo(owner, blobName)
   }, [owner, blobName])
 
-  const [existence, setExistence] = useState<ExistenceState>('checking')
   const [muted, setMuted] = useState(true)
   const [liked, setLiked] = useState<Set<string>>(() => loadLikedIds())
   const [tipVideo, setTipVideo] = useState<FeedVideo | null>(null)
@@ -103,27 +100,6 @@ function VideoDetail() {
 
   const wallet = useLoopWallet()
   const walletModal = useWalletModal()
-
-  useEffect(() => {
-    if (!video?.videoUrl) {
-      setExistence('missing')
-      return
-    }
-    let cancelled = false
-    setExistence('checking')
-    fetch(video.videoUrl, { method: 'HEAD' })
-      .then((res) => {
-        if (cancelled) return
-        setExistence(res.ok ? 'found' : 'missing')
-      })
-      .catch(() => {
-        if (cancelled) return
-        setExistence('missing')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [video?.videoUrl])
 
   const toggleLike = (id: string) => {
     setLiked((prev) => {
@@ -152,7 +128,7 @@ function VideoDetail() {
     setToastMessage(ok ? 'Link copied' : 'Could not copy link')
   }
 
-  if (!video || existence === 'missing') {
+  if (!video) {
     const shortOwner = owner ? shortAddress(owner, 6, 4) : ''
     const title = shortOwner
       ? `Video by @${shortOwner} on Loop`

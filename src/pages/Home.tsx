@@ -1,10 +1,9 @@
-import { useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { PlayIcon } from '../components/feed/icons'
 import { shortAddress } from '../lib/formatAddress'
 import {
-  getShelbyBlobMediaUrl,
   getUploadedVideos,
-  networkOf,
   type StoredVideo,
 } from '../lib/videoStorage'
 import './Home.css'
@@ -37,68 +36,50 @@ interface PreviewItem {
   routeId: string
   username: string
   caption: string
-  videoUrl: string
   color: string
   chain: string
 }
 
 function toPreviewItem(stored: StoredVideo): PreviewItem {
-  const network = networkOf(stored)
   return {
     id: stored.id,
     routeId: `uploaded:${stored.id}`,
     username: `@${shortAddress(stored.uploaderAddress, 4, 4)}`,
     caption: stored.caption || 'Untitled',
-    videoUrl: getShelbyBlobMediaUrl(network, stored.ownerAddress, stored.blobName),
     color: previewColor(stored.uploaderAddress),
     chain: stored.chain,
   }
 }
 
 function PreviewCard({ item }: { item: PreviewItem }) {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const loadedRef = useRef(false)
-
-  const handleMouseEnter = () => {
-    const el = videoRef.current
-    if (!el) return
-    if (!loadedRef.current) {
-      el.load()
-      loadedRef.current = true
-    }
-    el.currentTime = 0
-    el.play().catch(() => {})
-  }
-
-  const handleMouseLeave = () => {
-    const el = videoRef.current
-    if (!el) return
-    el.pause()
-  }
-
   return (
     <Link
       to={`/feed?v=${encodeURIComponent(item.routeId)}`}
       className="preview-card"
       style={{ background: gradientFor(item.color) }}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
     >
-      <video
-        ref={videoRef}
-        className="preview-card-video"
-        src={item.videoUrl}
-        muted
-        playsInline
-        preload="none"
-      />
       <div className="preview-card-overlay" aria-hidden="true" />
-      <span
-        className={`preview-chain preview-chain-${item.chain.toLowerCase()}`}
-      >
-        {item.chain}
+
+      <span className="preview-live" aria-hidden="true">
+        <span className="preview-live-dot" />
+        LIVE
       </span>
-      <span className="preview-user">{item.username}</span>
+
+      <span className="preview-play" aria-hidden="true">
+        <PlayIcon size={26} />
+      </span>
+
+      <div className="preview-card-foot">
+        <span className="preview-caption">{item.caption}</span>
+        <span className="preview-user-row">
+          <span className="preview-user">{item.username}</span>
+          <span
+            className={`preview-chain preview-chain-${item.chain.toLowerCase()}`}
+          >
+            {item.chain}
+          </span>
+        </span>
+      </div>
     </Link>
   )
 }

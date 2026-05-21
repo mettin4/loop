@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FeedVideo } from '../../types/video'
 import LikeBurst from './LikeBurst'
-import { PlayIcon } from './icons'
+import { MutedIcon, PlayIcon } from './icons'
 import './VideoCard.css'
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
   muted: boolean
   preloadHint: 'auto' | 'metadata' | 'none'
   onLike: () => void
+  onUnmute: () => void
 }
 
 function VideoCard({
@@ -24,21 +25,46 @@ function VideoCard({
   muted,
   preloadHint,
   onLike,
+  onUnmute,
 }: Props) {
   const [isPlaying, setIsPlaying] = useState(true)
   const [progress, setProgress] = useState(0)
   const [burstKey, setBurstKey] = useState(0)
   const [loadFailed, setLoadFailed] = useState(false)
   const [isBuffered, setIsBuffered] = useState(false)
+  const [captionExpanded, setCaptionExpanded] = useState(false)
+  const [captionOverflows, setCaptionOverflows] = useState(false)
   const tapTimeoutRef = useRef<number | null>(null)
   const lastTapRef = useRef(0)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const captionRef = useRef<HTMLParagraphElement>(null)
   const hasRealVideo = !!video.videoUrl
 
   useEffect(() => {
     setIsBuffered(false)
     setLoadFailed(false)
   }, [video.videoUrl])
+
+  useEffect(() => {
+    setCaptionExpanded(false)
+  }, [video.id])
+
+  useEffect(() => {
+    if (captionExpanded) return
+    const el = captionRef.current
+    if (!el) {
+      setCaptionOverflows(false)
+      return
+    }
+    setCaptionOverflows(el.scrollHeight > el.clientHeight + 1)
+  }, [video.caption, video.id, captionExpanded])
+
+  // React's muted attribute does not always sync to the DOM property,
+  // so set it imperatively to guarantee sound toggles take effect.
+  useEffect(() => {
+    const el = videoRef.current
+    if (el) el.muted = muted
+  }, [muted, hasRealVideo, video.videoUrl])
 
   useEffect(() => {
     const el = videoRef.current
@@ -168,6 +194,23 @@ function VideoCard({
           </div>
         )}
 
+        {hasRealVideo && isActive && muted && !loadFailed && (
+          <button
+            type="button"
+            className="video-unmute-hint"
+            onClick={(e) => {
+              e.stopPropagation()
+              onUnmute()
+            }}
+            aria-label="Tap to unmute"
+          >
+            <span className="video-unmute-hint-icon">
+              <MutedIcon size={18} />
+            </span>
+            <span className="video-unmute-hint-text">Tap to unmute</span>
+          </button>
+        )}
+
         {hasRealVideo && loadFailed && (
           <div className="video-load-error" aria-live="polite">
             <span>Video failed to load. See console.</span>
@@ -180,6 +223,43 @@ function VideoCard({
           <span className="video-counter">
             {index + 1} / {total}
           </span>
+        </div>
+
+        <div className="video-overlay-bottom">
+          <div className="video-meta">
+            <span className="video-meta-user">{video.username}</span>
+            {video.caption && (
+              <p
+                ref={captionRef}
+                className={`video-meta-caption${
+                  captionExpanded ? ' video-meta-caption-expanded' : ''
+                }`}
+              >
+                {video.caption}
+              </p>
+            )}
+            {(captionOverflows || captionExpanded) && (
+              <button
+                type="button"
+                className="video-meta-more"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setCaptionExpanded((v) => !v)
+                }}
+              >
+                {captionExpanded ? 'less' : '...more'}
+              </button>
+            )}
+            {video.tags && video.tags.length > 0 && (
+              <div className="video-meta-tags">
+                {video.tags.map((tag) => (
+                  <span key={tag} className="video-meta-tag">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div

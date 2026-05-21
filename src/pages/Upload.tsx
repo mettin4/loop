@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import ComingSoonToast from '../components/tip/ComingSoonToast'
 import CaptionInput from '../components/upload/CaptionInput'
 import ChainSelector from '../components/upload/ChainSelector'
+import TagsInput, { parseTags } from '../components/upload/TagsInput'
 import UploadDropZone from '../components/upload/VideoDropZone'
 import UploadError from '../components/upload/UploadError'
 import UploadProgress from '../components/upload/UploadProgress'
@@ -36,6 +37,7 @@ function Upload() {
 
   const [file, setFile] = useState<File | null>(null)
   const [caption, setCaption] = useState('')
+  const [tagsInput, setTagsInput] = useState('')
   const [stage, setStage] = useState<Stage>('idle')
   const [progressStage, setProgressStage] = useState<UploadStage>('preparing')
   const [result, setResult] = useState<UploadResult | null>(null)
@@ -78,10 +80,12 @@ function Upload() {
       })
 
       if (uploadResult.blobUploaded && uploadResult.blobExplorerUrl) {
+        const parsedTags = parseTags(tagsInput)
         saveUploadedVideo({
           id: uploadResult.blobName,
           blobName: uploadResult.blobName,
           caption: caption.trim(),
+          tags: parsedTags.length > 0 ? parsedTags : undefined,
           uploaderAddress: String(aptos.account.address),
           chain: 'APT',
           txHash: uploadResult.hash,
@@ -162,6 +166,8 @@ function Upload() {
                 onChange={setCaption}
                 maxLength={MAX_CAPTION}
               />
+
+              <TagsInput value={tagsInput} onChange={setTagsInput} />
 
               <ChainSelector
                 value="APT"

@@ -4,6 +4,7 @@ export interface FeedVideo {
   avatar: string
   bio: string
   caption: string
+  tags?: string[]
   chain: 'APT' | 'ETH' | 'SOL'
   dominantColor: string
   duration: number

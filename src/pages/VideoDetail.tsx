@@ -221,6 +221,7 @@ function VideoDetail() {
           muted={muted}
           preloadHint="auto"
           onLike={() => toggleLike(video.id)}
+          onUnmute={() => setMuted(false)}
         />
       </div>
 

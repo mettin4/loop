@@ -305,6 +305,7 @@ function Feed() {
               muted={muted}
               preloadHint={preloadHint}
               onLike={() => handleToggleLike(video)}
+              onUnmute={() => setMuted(false)}
             />
           )
         })}

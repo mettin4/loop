@@ -269,6 +269,68 @@
   color: var(--accent);
 }
 
+/* ===== TAGS ===== */
+.upload-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upload-tags-label {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.upload-tags-optional {
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.upload-tags-input {
+  width: 100%;
+  background: var(--bg);
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.18s ease;
+}
+
+.upload-tags-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.upload-tags-input:focus {
+  border-color: var(--accent);
+}
+
+.upload-tags-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.upload-tags-chip {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--accent);
+  background: rgba(255, 51, 102, 0.08);
+  border: 0.5px solid rgba(255, 51, 102, 0.3);
+}
+
 /* ===== CHAIN SELECTOR ===== */
 .upload-chain-block {
   display: flex;

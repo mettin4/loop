@@ -13,6 +13,10 @@ export interface StoredVideo {
   ownerAddress: string
   blobExplorerUrl: string
   /**
+   * Optional creator tags. Older entries are missing this field.
+   */
+  tags?: string[]
+  /**
    * Shelby network the blob lives on. Older entries (pre-Aptos-Testnet
    * migration) are missing this field and are treated as 'shelbynet'.
    */
@@ -38,6 +42,9 @@ function safeParse(raw: string | null): StoredVideo[] {
       .map((v) => ({
         ...v,
         chain: (v.chain as UploadedChain) || 'APT',
+        tags: Array.isArray(v.tags)
+          ? v.tags.filter((t: unknown): t is string => typeof t === 'string')
+          : undefined,
       }))
   } catch {
     return []

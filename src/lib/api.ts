@@ -3,12 +3,6 @@ export interface LikesResponse {
   isLiked: boolean
 }
 
-export interface FollowResponse {
-  count: number
-  isFollowing: boolean
-  followers?: string[]
-}
-
 export interface CommentRecord {
   author: string
   text: string
@@ -84,25 +78,6 @@ export function toggleLike(
     userAddress,
     ownerAddress,
     caption,
-  })
-}
-
-export function getFollow(
-  targetAddress: string,
-  userAddress?: string,
-): Promise<FollowResponse> {
-  const q = new URLSearchParams({ targetAddress })
-  if (userAddress) q.set('userAddress', userAddress)
-  return getJson<FollowResponse>(`/api/follows?${q.toString()}`)
-}
-
-export function toggleFollow(
-  targetAddress: string,
-  userAddress: string,
-): Promise<FollowResponse> {
-  return postJson<FollowResponse>('/api/follows', {
-    targetAddress,
-    userAddress,
   })
 }
 

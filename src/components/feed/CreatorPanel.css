@@ -92,35 +92,3 @@
   color: #ffd54f;
   border: 1px solid rgba(255, 213, 79, 0.5);
 }
-
-.creator-follow {
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  padding: 6px 16px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: transparent;
-  color: #ffffff;
-  cursor: pointer;
-  transition: background-color 0.18s ease, border-color 0.18s ease,
-    color 0.18s ease;
-  margin-top: 4px;
-}
-
-.creator-follow:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.creator-follow-active {
-  border-color: rgba(255, 255, 255, 0.32);
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.creator-follow-active:hover {
-  background: transparent;
-  border-color: var(--accent);
-  color: var(--accent);
-}

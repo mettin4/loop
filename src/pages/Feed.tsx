@@ -8,13 +8,7 @@ import VideoCard from '../components/feed/VideoCard'
 import { MutedIcon, UnmutedIcon } from '../components/feed/icons'
 import ComingSoonToast from '../components/tip/ComingSoonToast'
 import TipModal from '../components/tip/TipModal'
-import {
-  getComments,
-  getFollow,
-  getLikes,
-  toggleFollow,
-  toggleLike,
-} from '../lib/api'
+import { getComments, getLikes, toggleLike } from '../lib/api'
 import { uploadedToFeedVideo } from '../lib/feedVideo'
 import { copyVideoShareLink } from '../lib/shareLink'
 import { tipConfigs } from '../lib/tipConfig'
@@ -68,17 +62,12 @@ function Feed() {
   const [liked, setLiked] = useState<Set<string>>(() => loadLikedIds())
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({})
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
-  const [followState, setFollowState] = useState<
-    Record<string, { isFollowing: boolean; count: number }>
-  >({})
-  const [followPending, setFollowPending] = useState<Set<string>>(new Set())
   const [tipVideo, setTipVideo] = useState<FeedVideo | null>(null)
   const [commentVideo, setCommentVideo] = useState<FeedVideo | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const fetchedLikes = useRef<Set<string>>(new Set())
   const fetchedComments = useRef<Set<string>>(new Set())
-  const fetchedFollow = useRef<Set<string>>(new Set())
 
   const wallet = useLoopWallet()
   const walletModal = useWalletModal()
@@ -182,25 +171,6 @@ function Feed() {
       .catch(() => {})
   }, [activeVideo])
 
-  useEffect(() => {
-    const video = activeVideo
-    if (!video || !video.ownerAddress) return
-    const cacheKey = `${video.ownerAddress}::${userAddress ?? ''}`
-    if (fetchedFollow.current.has(cacheKey)) return
-    fetchedFollow.current.add(cacheKey)
-    getFollow(video.ownerAddress, userAddress ?? undefined)
-      .then((r) => {
-        setFollowState((p) => ({
-          ...p,
-          [video.ownerAddress as string]: {
-            isFollowing: r.isFollowing,
-            count: r.count,
-          },
-        }))
-      })
-      .catch(() => {})
-  }, [activeVideo, userAddress])
-
   const handleToggleLike = useCallback(
     (video: FeedVideo) => {
       if (!userAddress) {
@@ -277,45 +247,6 @@ function Feed() {
     setCommentVideo(video)
   }
 
-  const handleToggleFollow = () => {
-    const video = activeVideo
-    if (!video || !video.ownerAddress) return
-    if (!userAddress) {
-      setToastMessage('Connect wallet to follow')
-      return
-    }
-    const target = video.ownerAddress
-    if (target.toLowerCase() === userAddress.toLowerCase()) return
-    if (followPending.has(target)) return
-
-    const current = followState[target] ?? { isFollowing: false, count: 0 }
-    const optimistic = {
-      isFollowing: !current.isFollowing,
-      count: Math.max(0, current.count + (current.isFollowing ? -1 : 1)),
-    }
-    setFollowState((p) => ({ ...p, [target]: optimistic }))
-    setFollowPending((p) => new Set(p).add(target))
-
-    toggleFollow(target, userAddress)
-      .then((r) => {
-        setFollowState((p) => ({
-          ...p,
-          [target]: { isFollowing: r.isFollowing, count: r.count },
-        }))
-      })
-      .catch(() => {
-        setFollowState((p) => ({ ...p, [target]: current }))
-        setToastMessage("Couldn't sync follow")
-      })
-      .finally(() => {
-        setFollowPending((p) => {
-          const next = new Set(p)
-          next.delete(target)
-          return next
-        })
-      })
-  }
-
   const handleCommentCountChange = useCallback(
     (videoId: string, count: number) => {
       setCommentCounts((p) => ({ ...p, [videoId]: count }))
@@ -337,15 +268,6 @@ function Feed() {
     )
   }
 
-  const activeOwner = activeVideo.ownerAddress ?? ''
-  const activeFollow = activeOwner ? followState[activeOwner] : undefined
-  const isSelfActive =
-    !!userAddress &&
-    !!activeOwner &&
-    userAddress.toLowerCase() === activeOwner.toLowerCase()
-  const activeIsFollowing = !!activeFollow?.isFollowing
-  const activeIsPending = !!activeOwner && followPending.has(activeOwner)
-
   const activeVideoForDisplay: FeedVideo = {
     ...activeVideo,
     likes: likeCounts[activeVideo.id] ?? activeVideo.likes,
@@ -356,13 +278,7 @@ function Feed() {
     <div className="feed-page">
       <AmbientGlow color={activeVideo.dominantColor} />
 
-      <CreatorPanel
-        video={activeVideo}
-        isFollowing={activeIsFollowing}
-        isSelf={isSelfActive}
-        isPending={activeIsPending}
-        onToggleFollow={handleToggleFollow}
-      />
+      <CreatorPanel video={activeVideo} />
 
       <button
         type="button"
@@ -397,14 +313,10 @@ function Feed() {
       <ActionStack
         video={activeVideoForDisplay}
         isLiked={liked.has(activeVideo.id)}
-        isSelf={isSelfActive}
-        isFollowing={activeIsFollowing}
-        isPending={activeIsPending}
         onLike={() => handleToggleLike(activeVideo)}
         onComment={handleOpenComments}
         onTip={handleTip}
         onShare={handleShare}
-        onToggleFollow={handleToggleFollow}
       />
 
       <TipModal

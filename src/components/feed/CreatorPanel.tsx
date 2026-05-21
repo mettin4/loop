@@ -3,19 +3,9 @@ import './CreatorPanel.css'
 
 interface Props {
   video: FeedVideo
-  isFollowing: boolean
-  isSelf: boolean
-  isPending: boolean
-  onToggleFollow: () => void
 }
 
-function CreatorPanel({
-  video,
-  isFollowing,
-  isSelf,
-  isPending,
-  onToggleFollow,
-}: Props) {
+function CreatorPanel({ video }: Props) {
   return (
     <aside className="creator-panel" aria-label="Creator info">
       <div className="creator-panel-inner" key={video.id}>
@@ -36,18 +26,6 @@ function CreatorPanel({
             {video.network === 'shelbynet' ? 'SHELBYNET' : 'TESTNET'}
           </span>
         </div>
-        {!isSelf && (
-          <button
-            type="button"
-            className={`creator-follow${
-              isFollowing ? ' creator-follow-active' : ''
-            }`}
-            onClick={onToggleFollow}
-            disabled={isPending}
-          >
-            {isFollowing ? 'Following' : 'Follow'}
-          </button>
-        )}
       </div>
     </aside>
   )

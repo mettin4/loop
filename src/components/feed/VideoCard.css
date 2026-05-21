@@ -328,6 +328,32 @@
   pointer-events: none;
 }
 
+.video-retry {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+  padding: 12px 20px;
+  border-radius: 999px;
+  border: 0.5px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.72);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.video-retry:hover {
+  background: rgba(0, 0, 0, 0.88);
+  border-color: rgba(255, 255, 255, 0.34);
+}
+
 .video-loading {
   position: absolute;
   inset: 0;

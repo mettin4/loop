@@ -58,7 +58,10 @@ function Feed() {
   })()
 
   const [activeIndex, setActiveIndex] = useState(initialIndex)
-  const [muted, setMuted] = useState(true)
+  // Sticky sound preference: once the user unmutes, every subsequent video
+  // plays with sound. Drives the per-card `muted` prop.
+  const [userWantsSound, setUserWantsSound] = useState(false)
+  const muted = !userWantsSound
   const [liked, setLiked] = useState<Set<string>>(() => loadLikedIds())
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({})
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
@@ -283,7 +286,7 @@ function Feed() {
       <button
         type="button"
         className="feed-mute"
-        onClick={() => setMuted((m) => !m)}
+        onClick={() => setUserWantsSound((s) => !s)}
         aria-label={muted ? 'Unmute' : 'Mute'}
       >
         {muted ? <MutedIcon size={20} /> : <UnmutedIcon size={20} />}
@@ -294,6 +297,9 @@ function Feed() {
           const distance = Math.abs(i - activeIndex)
           const preloadHint: 'auto' | 'metadata' | 'none' =
             distance === 0 ? 'auto' : distance === 1 ? 'metadata' : 'none'
+          // Only the active card and its immediate neighbors get a src,
+          // so distant cards never hit the Shelby RPC (avoids 429 storms).
+          const shouldLoad = distance <= 1
           return (
             <VideoCard
               key={video.id}
@@ -303,9 +309,10 @@ function Feed() {
               isActive={i === activeIndex}
               isLiked={liked.has(video.id)}
               muted={muted}
+              shouldLoad={shouldLoad}
               preloadHint={preloadHint}
               onLike={() => handleToggleLike(video)}
-              onUnmute={() => setMuted(false)}
+              onUnmute={() => setUserWantsSound(true)}
             />
           )
         })}

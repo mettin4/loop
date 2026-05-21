@@ -11,10 +11,14 @@ interface Props {
   isActive: boolean
   isLiked: boolean
   muted: boolean
+  /** When false, the video src is not assigned so no Shelby request fires. */
+  shouldLoad: boolean
   preloadHint: 'auto' | 'metadata' | 'none'
   onLike: () => void
   onUnmute: () => void
 }
+
+const MAX_RETRIES = 3
 
 function VideoCard({
   video,
@@ -23,6 +27,7 @@ function VideoCard({
   isActive,
   isLiked,
   muted,
+  shouldLoad,
   preloadHint,
   onLike,
   onUnmute,
@@ -30,7 +35,7 @@ function VideoCard({
   const [isPlaying, setIsPlaying] = useState(true)
   const [progress, setProgress] = useState(0)
   const [burstKey, setBurstKey] = useState(0)
-  const [loadFailed, setLoadFailed] = useState(false)
+  const [unavailable, setUnavailable] = useState(false)
   const [isBuffered, setIsBuffered] = useState(false)
   const [captionExpanded, setCaptionExpanded] = useState(false)
   const [captionOverflows, setCaptionOverflows] = useState(false)
@@ -38,12 +43,27 @@ function VideoCard({
   const lastTapRef = useRef(0)
   const videoRef = useRef<HTMLVideoElement>(null)
   const captionRef = useRef<HTMLParagraphElement>(null)
+  const retryCountRef = useRef(0)
+  const retryTimerRef = useRef<number | null>(null)
   const hasRealVideo = !!video.videoUrl
+  const showVideo = hasRealVideo && shouldLoad
 
+  const clearRetryTimer = () => {
+    if (retryTimerRef.current) {
+      window.clearTimeout(retryTimerRef.current)
+      retryTimerRef.current = null
+    }
+  }
+
+  // Reset transient load state whenever the source or load gating changes.
   useEffect(() => {
     setIsBuffered(false)
-    setLoadFailed(false)
-  }, [video.videoUrl])
+    setUnavailable(false)
+    retryCountRef.current = 0
+    clearRetryTimer()
+  }, [video.videoUrl, shouldLoad])
+
+  useEffect(() => clearRetryTimer, [])
 
   useEffect(() => {
     setCaptionExpanded(false)
@@ -64,11 +84,11 @@ function VideoCard({
   useEffect(() => {
     const el = videoRef.current
     if (el) el.muted = muted
-  }, [muted, hasRealVideo, video.videoUrl])
+  }, [muted, showVideo])
 
   useEffect(() => {
     const el = videoRef.current
-    if (!el || !hasRealVideo) return
+    if (!el || !showVideo) return
 
     if (!isActive || !isPlaying) {
       el.pause()
@@ -89,7 +109,7 @@ function VideoCard({
 
     el.addEventListener('canplay', tryPlay, { once: true })
     return () => el.removeEventListener('canplay', tryPlay)
-  }, [isActive, isPlaying, hasRealVideo, video.videoUrl])
+  }, [isActive, isPlaying, showVideo, video.videoUrl])
 
   useEffect(() => {
     if (hasRealVideo) return
@@ -112,6 +132,45 @@ function VideoCard({
     const el = videoRef.current
     if (!el || !el.duration || Number.isNaN(el.duration)) return
     setProgress(el.currentTime / el.duration)
+  }
+
+  const handleCanPlay = () => {
+    setIsBuffered(true)
+    setUnavailable(false)
+    retryCountRef.current = 0
+  }
+
+  // Auto-retry on load error with exponential backoff (2s, 4s, 6s).
+  const handleError = () => {
+    if (!showVideo) return
+    clearRetryTimer()
+    if (retryCountRef.current >= MAX_RETRIES) {
+      setUnavailable(true)
+      return
+    }
+    const attempt = retryCountRef.current + 1
+    retryCountRef.current = attempt
+    const delay = attempt * 2000
+    console.log(
+      `[video retry] ${video.id} attempt ${attempt}/${MAX_RETRIES} in ${delay}ms`,
+    )
+    retryTimerRef.current = window.setTimeout(() => {
+      const el = videoRef.current
+      if (!el) return
+      el.load()
+      if (isActive && isPlaying) el.play().catch(() => {})
+    }, delay)
+  }
+
+  const handleManualRetry = () => {
+    retryCountRef.current = 0
+    clearRetryTimer()
+    setUnavailable(false)
+    setIsBuffered(false)
+    const el = videoRef.current
+    if (!el) return
+    el.load()
+    if (isActive && isPlaying) el.play().catch(() => {})
   }
 
   useEffect(() => {
@@ -140,6 +199,18 @@ function VideoCard({
     }, 280)
   }
 
+  const handleUnmute = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const el = videoRef.current
+    if (el) {
+      el.muted = false
+      el.volume = 1.0
+      el.play().catch(() => {})
+      console.log('[unmute] el.muted =', el.muted, 'volume =', el.volume)
+    }
+    onUnmute()
+  }
+
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
     const ratio = (e.clientX - rect.left) / rect.width
@@ -154,13 +225,9 @@ function VideoCard({
     >
       <div
         className="video-container"
-        style={
-          hasRealVideo
-            ? undefined
-            : { background: video.dominantColor }
-        }
+        style={showVideo ? undefined : { background: video.dominantColor }}
       >
-        {hasRealVideo && (
+        {showVideo && (
           <video
             ref={videoRef}
             className="video-element"
@@ -170,12 +237,12 @@ function VideoCard({
             playsInline
             preload={preloadHint}
             onTimeUpdate={handleTimeUpdate}
-            onCanPlay={() => setIsBuffered(true)}
-            onError={() => setLoadFailed(true)}
+            onCanPlay={handleCanPlay}
+            onError={handleError}
           />
         )}
 
-        {hasRealVideo && isActive && !isBuffered && !loadFailed && (
+        {showVideo && isActive && !isBuffered && !unavailable && (
           <div className="video-loading" aria-hidden="true">
             <span className="video-loading-spinner" />
           </div>
@@ -194,14 +261,11 @@ function VideoCard({
           </div>
         )}
 
-        {hasRealVideo && isActive && muted && !loadFailed && (
+        {showVideo && isActive && muted && !unavailable && (
           <button
             type="button"
             className="video-unmute-hint"
-            onClick={(e) => {
-              e.stopPropagation()
-              onUnmute()
-            }}
+            onClick={handleUnmute}
             aria-label="Tap to unmute"
           >
             <span className="video-unmute-hint-icon">
@@ -211,10 +275,17 @@ function VideoCard({
           </button>
         )}
 
-        {hasRealVideo && loadFailed && (
-          <div className="video-load-error" aria-live="polite">
-            <span>Video failed to load. See console.</span>
-          </div>
+        {showVideo && unavailable && (
+          <button
+            type="button"
+            className="video-retry"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleManualRetry()
+            }}
+          >
+            Video unavailable, tap to retry
+          </button>
         )}
 
         <LikeBurst trigger={burstKey} />

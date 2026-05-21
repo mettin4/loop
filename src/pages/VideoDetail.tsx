@@ -219,6 +219,7 @@ function VideoDetail() {
           isActive
           isLiked={liked.has(video.id)}
           muted={muted}
+          shouldLoad
           preloadHint="auto"
           onLike={() => toggleLike(video.id)}
           onUnmute={() => setMuted(false)}

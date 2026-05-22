@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PlayIcon } from '../components/feed/icons'
 import { shortAddress } from '../lib/formatAddress'
@@ -10,35 +10,11 @@ import {
 } from '../lib/videoStorage'
 import './Home.css'
 
-const PREVIEW_PALETTE = [
-  '#3d4d8a',
-  '#1a7a8a',
-  '#a64d2a',
-  '#6b3d8a',
-  '#a63d5a',
-  '#3d4dab',
-  '#ff3366',
-  '#00ffaa',
-]
-
-function previewColor(seed: string): string {
-  let hash = 0
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash * 31 + seed.charCodeAt(i)) | 0
-  }
-  return PREVIEW_PALETTE[Math.abs(hash) % PREVIEW_PALETTE.length]
-}
-
-function gradientFor(color: string): string {
-  return `linear-gradient(160deg, ${color} 0%, #0a0a0a 90%)`
-}
-
 interface PreviewItem {
   id: string
   routeId: string
   username: string
   caption: string
-  color: string
   chain: string
   thumbnailUrl?: string
   videoUrl: string
@@ -51,7 +27,6 @@ function toPreviewItem(stored: StoredVideo): PreviewItem {
     routeId: `uploaded:${stored.id}`,
     username: `@${shortAddress(stored.uploaderAddress, 4, 4)}`,
     caption: stored.caption || 'Untitled',
-    color: previewColor(stored.uploaderAddress),
     chain: stored.chain,
     thumbnailUrl: stored.thumbnailUrl,
     videoUrl: getShelbyBlobMediaUrl(
@@ -63,48 +38,52 @@ function toPreviewItem(stored: StoredVideo): PreviewItem {
 }
 
 function PreviewCard({ item }: { item: PreviewItem }) {
-  // Static poster by default (zero Shelby requests). The video element is
-  // only mounted while hovering, so a single clip loads on demand.
+  // The video element is always mounted with preload="metadata" so each card
+  // shows the paused first frame as its poster. Hover plays the clip.
   const [hovering, setHovering] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
 
-  useEffect(() => {
-    if (!hovering) return
+  const handleLoadedMetadata = () => {
     const el = videoRef.current
     if (!el) return
-    el.load()
-    el.play().catch(() => {})
-  }, [hovering])
+    // Nudge off frame 0 so the still is a real image, not a black frame.
+    try {
+      el.currentTime = 0.1
+    } catch {
+      /* seeking can fail before metadata fully settles in some browsers */
+    }
+  }
+
+  const handleEnter = () => {
+    setHovering(true)
+    const el = videoRef.current
+    if (el) el.play().catch(() => {})
+  }
+
+  const handleLeave = () => {
+    setHovering(false)
+    const el = videoRef.current
+    if (el) el.pause()
+  }
 
   return (
     <Link
       to={`/feed?v=${encodeURIComponent(item.routeId)}`}
       className="preview-card"
-      style={{ background: gradientFor(item.color) }}
-      onMouseEnter={() => setHovering(true)}
-      onMouseLeave={() => setHovering(false)}
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
     >
-      {item.thumbnailUrl && (
-        <img
-          className="preview-card-poster"
-          src={item.thumbnailUrl}
-          alt=""
-          loading="lazy"
-          decoding="async"
-        />
-      )}
-
-      {hovering && (
-        <video
-          ref={videoRef}
-          className="preview-card-video"
-          src={item.videoUrl}
-          muted
-          loop
-          playsInline
-          preload="none"
-        />
-      )}
+      <video
+        ref={videoRef}
+        className="preview-card-video"
+        src={item.videoUrl}
+        poster={item.thumbnailUrl}
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        onLoadedMetadata={handleLoadedMetadata}
+      />
 
       <div className="preview-card-overlay" aria-hidden="true" />
 

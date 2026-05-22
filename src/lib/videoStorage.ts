@@ -13,6 +13,11 @@ export interface StoredVideo {
   ownerAddress: string
   blobExplorerUrl: string
   /**
+   * Optional poster image (Shelby blob URL) captured at upload time.
+   * Older entries are missing this field and fall back to a gradient.
+   */
+  thumbnailUrl?: string
+  /**
    * Optional creator tags. Older entries are missing this field.
    */
   tags?: string[]

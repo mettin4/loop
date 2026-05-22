@@ -40,6 +40,7 @@ export function uploadedToFeedVideo(stored: StoredVideo): FeedVideo {
     bio: 'Uploaded to Loop',
     caption: stored.caption || 'Untitled',
     tags: stored.tags,
+    thumbnailUrl: stored.thumbnailUrl,
     chain: stored.chain,
     dominantColor: dominantColorFromAddress(stored.uploaderAddress),
     duration: 0,

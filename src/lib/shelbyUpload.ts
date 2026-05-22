@@ -12,6 +12,7 @@ import {
   getShelbyBlobExplorerUrl,
 } from '@shelby-protocol/sdk/browser'
 import { SHELBY_CONFIG, type ShelbyMode } from './shelbyNetwork'
+import { generateThumbnailBlob } from './thumbnail'
 
 const aptosConfig = new AptosConfig({ network: SHELBY_CONFIG.network })
 export const shelbyAptosClient = new Aptos(aptosConfig)
@@ -30,6 +31,7 @@ export type UploadStage =
   | 'encoding'
   | 'registering'
   | 'uploading'
+  | 'thumbnail'
   | 'complete'
 
 export interface UploadParams {
@@ -48,6 +50,76 @@ export interface UploadResult {
   blobExplorerUrl?: string
   ownerAddress: string
   network: ShelbyMode
+  thumbnailUrl?: string
+}
+
+function buildBlobMediaUrl(ownerAddress: string, blobName: string): string {
+  const segments = blobName
+    .split('/')
+    .map((s) => encodeURIComponent(s))
+    .join('/')
+  return `${SHELBY_CONFIG.shelbyRpcBase}/blobs/${ownerAddress}/${segments}`
+}
+
+/**
+ * Register and upload the poster image as its own Shelby blob. Best-effort:
+ * any failure here is logged and swallowed so the video upload is unaffected.
+ * Returns the thumbnail media URL on success, otherwise undefined.
+ */
+async function uploadThumbnailBlob(params: {
+  file: File
+  videoBlobName: string
+  accountAddress: AccountAddress
+  accountAddressString: string
+  signAndSubmitTransaction: UploadParams['signAndSubmitTransaction']
+  provider: Awaited<ReturnType<typeof createDefaultErasureCodingProvider>>
+}): Promise<string | undefined> {
+  const {
+    file,
+    videoBlobName,
+    accountAddress,
+    accountAddressString,
+    signAndSubmitTransaction,
+    provider,
+  } = params
+
+  try {
+    const thumbBlob = await generateThumbnailBlob(file)
+    const thumbData = new Uint8Array(await thumbBlob.arrayBuffer())
+    const thumbBlobName = `${videoBlobName}.thumb.jpg`
+    console.log('[shelby] thumbnail generated', {
+      thumbBlobName,
+      sizeBytes: thumbData.length,
+    })
+
+    const commitments = await generateCommitments(provider, thumbData)
+    const expirationMicros = (Date.now() + 1000 * 60 * 60 * 24 * 365) * 1000
+
+    const payload = ShelbyBlobClient.createRegisterBlobPayload({
+      account: accountAddress,
+      blobName: thumbBlobName,
+      blobMerkleRoot: commitments.blob_merkle_root,
+      numChunksets: expectedTotalChunksets(commitments.raw_data_size),
+      expirationMicros,
+      blobSize: commitments.raw_data_size,
+      encoding: 0,
+    })
+
+    const tx = await signAndSubmitTransaction({ data: payload })
+    await shelbyAptosClient.waitForTransaction({ transactionHash: tx.hash })
+
+    await shelbyClient.rpc.putBlob({
+      account: accountAddressString,
+      blobName: thumbBlobName,
+      blobData: thumbData,
+    })
+
+    console.log('[shelby] thumbnail uploaded', { thumbBlobName })
+    return buildBlobMediaUrl(accountAddressString, thumbBlobName)
+  } catch (err) {
+    console.warn('[shelby] thumbnail upload skipped:', err)
+    return undefined
+  }
 }
 
 async function verifyBlobUploaded(
@@ -185,6 +257,19 @@ export async function uploadVideoToShelby(
     }
   }
 
+  let thumbnailUrl: string | undefined
+  if (blobUploaded) {
+    onProgress('thumbnail')
+    thumbnailUrl = await uploadThumbnailBlob({
+      file,
+      videoBlobName: blobName,
+      accountAddress,
+      accountAddressString: account.address,
+      signAndSubmitTransaction,
+      provider,
+    })
+  }
+
   onProgress('complete')
 
   return {
@@ -194,6 +279,7 @@ export async function uploadVideoToShelby(
     uploadError,
     ownerAddress: accountAddress.toString(),
     network: SHELBY_CONFIG.mode,
+    thumbnailUrl,
     blobExplorerUrl: blobUploaded
       ? getShelbyBlobExplorerUrl(
           SHELBY_CONFIG.network,

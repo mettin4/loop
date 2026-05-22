@@ -151,15 +151,24 @@ function ProfileVideoCard({ video }: VideoCardProps) {
       onMouseLeave={handleLeave}
     >
       <div className="profile-video-thumb">
-        <video
-          ref={videoRef}
-          src={src}
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          onLoadedMetadata={handleLoadedMetadata}
-        />
+        {video.thumbnailUrl ? (
+          <img
+            src={video.thumbnailUrl}
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <video
+            ref={videoRef}
+            src={src}
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            onLoadedMetadata={handleLoadedMetadata}
+          />
+        )}
         <div className="video-badges video-badges-thumb">
           <span className="video-badge video-badge-chain">
             {video.chain || 'APT'}

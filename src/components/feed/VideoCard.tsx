@@ -232,6 +232,7 @@ function VideoCard({
             ref={videoRef}
             className="video-element"
             src={video.videoUrl}
+            poster={video.thumbnailUrl}
             muted={muted}
             loop
             playsInline
@@ -239,6 +240,16 @@ function VideoCard({
             onTimeUpdate={handleTimeUpdate}
             onCanPlay={handleCanPlay}
             onError={handleError}
+          />
+        )}
+
+        {!showVideo && video.thumbnailUrl && (
+          <img
+            className="video-poster"
+            src={video.thumbnailUrl}
+            alt=""
+            loading="lazy"
+            decoding="async"
           />
         )}
 

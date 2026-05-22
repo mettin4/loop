@@ -86,6 +86,7 @@ function Upload() {
           blobName: uploadResult.blobName,
           caption: caption.trim(),
           tags: parsedTags.length > 0 ? parsedTags : undefined,
+          thumbnailUrl: uploadResult.thumbnailUrl,
           uploaderAddress: String(aptos.account.address),
           chain: 'APT',
           txHash: uploadResult.hash,

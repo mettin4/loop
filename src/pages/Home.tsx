@@ -38,6 +38,7 @@ interface PreviewItem {
   caption: string
   color: string
   chain: string
+  thumbnailUrl?: string
 }
 
 function toPreviewItem(stored: StoredVideo): PreviewItem {
@@ -48,6 +49,7 @@ function toPreviewItem(stored: StoredVideo): PreviewItem {
     caption: stored.caption || 'Untitled',
     color: previewColor(stored.uploaderAddress),
     chain: stored.chain,
+    thumbnailUrl: stored.thumbnailUrl,
   }
 }
 
@@ -58,6 +60,15 @@ function PreviewCard({ item }: { item: PreviewItem }) {
       className="preview-card"
       style={{ background: gradientFor(item.color) }}
     >
+      {item.thumbnailUrl && (
+        <img
+          className="preview-card-poster"
+          src={item.thumbnailUrl}
+          alt=""
+          loading="lazy"
+          decoding="async"
+        />
+      )}
       <div className="preview-card-overlay" aria-hidden="true" />
 
       <span className="preview-live" aria-hidden="true">

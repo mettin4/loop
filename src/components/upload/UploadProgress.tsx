@@ -9,6 +9,10 @@ const STAGE_COPY: Record<UploadStage, { title: string; hint?: string }> = {
     hint: 'Confirm in Petra',
   },
   uploading: { title: 'Uploading to Shelby network...' },
+  thumbnail: {
+    title: 'Saving poster image...',
+    hint: 'Confirm in Petra',
+  },
   complete: { title: 'Almost there...' },
 }
 

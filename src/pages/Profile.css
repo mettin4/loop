@@ -343,7 +343,8 @@
   contain: paint;
 }
 
-.profile-video-thumb video {
+.profile-video-thumb video,
+.profile-video-thumb img {
   position: absolute;
   inset: 0;
   width: 100%;

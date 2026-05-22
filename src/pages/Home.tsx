@@ -1,9 +1,11 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PlayIcon } from '../components/feed/icons'
 import { shortAddress } from '../lib/formatAddress'
 import {
+  getShelbyBlobMediaUrl,
   getUploadedVideos,
+  networkOf,
   type StoredVideo,
 } from '../lib/videoStorage'
 import './Home.css'
@@ -39,9 +41,11 @@ interface PreviewItem {
   color: string
   chain: string
   thumbnailUrl?: string
+  videoUrl: string
 }
 
 function toPreviewItem(stored: StoredVideo): PreviewItem {
+  const network = networkOf(stored)
   return {
     id: stored.id,
     routeId: `uploaded:${stored.id}`,
@@ -50,15 +54,35 @@ function toPreviewItem(stored: StoredVideo): PreviewItem {
     color: previewColor(stored.uploaderAddress),
     chain: stored.chain,
     thumbnailUrl: stored.thumbnailUrl,
+    videoUrl: getShelbyBlobMediaUrl(
+      network,
+      stored.ownerAddress,
+      stored.blobName,
+    ),
   }
 }
 
 function PreviewCard({ item }: { item: PreviewItem }) {
+  // Static poster by default (zero Shelby requests). The video element is
+  // only mounted while hovering, so a single clip loads on demand.
+  const [hovering, setHovering] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  useEffect(() => {
+    if (!hovering) return
+    const el = videoRef.current
+    if (!el) return
+    el.load()
+    el.play().catch(() => {})
+  }, [hovering])
+
   return (
     <Link
       to={`/feed?v=${encodeURIComponent(item.routeId)}`}
       className="preview-card"
       style={{ background: gradientFor(item.color) }}
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
     >
       {item.thumbnailUrl && (
         <img
@@ -69,6 +93,19 @@ function PreviewCard({ item }: { item: PreviewItem }) {
           decoding="async"
         />
       )}
+
+      {hovering && (
+        <video
+          ref={videoRef}
+          className="preview-card-video"
+          src={item.videoUrl}
+          muted
+          loop
+          playsInline
+          preload="none"
+        />
+      )}
+
       <div className="preview-card-overlay" aria-hidden="true" />
 
       <span className="preview-live" aria-hidden="true">
@@ -76,9 +113,11 @@ function PreviewCard({ item }: { item: PreviewItem }) {
         LIVE
       </span>
 
-      <span className="preview-play" aria-hidden="true">
-        <PlayIcon size={26} />
-      </span>
+      {!hovering && (
+        <span className="preview-play" aria-hidden="true">
+          <PlayIcon size={26} />
+        </span>
+      )}
 
       <div className="preview-card-foot">
         <span className="preview-caption">{item.caption}</span>

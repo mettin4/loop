@@ -450,7 +450,6 @@ function Home() {
             Start watching
           </button>
           <p className="cta-sub">No signup. No email. Just your wallet.</p>
-          <p className="cta-status">Live on Aptos Testnet via Shelby.</p>
         </div>
       </section>
 
